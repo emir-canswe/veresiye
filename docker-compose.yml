@@ -1,0 +1,16 @@
+﻿services:
+  db:
+    image: postgres:15
+    container_name: veresiye_db
+    restart: always
+    environment:
+      POSTGRES_USER: veresiye_user
+      POSTGRES_PASSWORD: veresiye_pass
+      POSTGRES_DB: veresiye_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - veresiye_data:/var/lib/postgresql/data
+
+volumes:
+  veresiye_data:

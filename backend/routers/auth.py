@@ -1,0 +1,96 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+from database import get_db
+from models.models import User
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
+from pydantic import BaseModel
+from typing import Optional
+
+SECRET_KEY = "veresiye_super_secret_key_2024"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 gün
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+router = APIRouter(prefix="/auth", tags=["Auth"])
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    username: str
+    role: str
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    role: Optional[str] = "calisan"
+
+class UserOut(BaseModel):
+    id: int
+    username: str
+    role: str
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+def verify_password(plain, hashed):
+    return pwd_context.verify(plain, hashed)
+
+def hash_password(password):
+    return pwd_context.hash(password)
+
+def create_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if not username:
+            raise HTTPException(status_code=401, detail="Geçersiz token")
+        user = db.query(User).filter(User.username == username).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="Kullanıcı bulunamadı")
+        return user
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Geçersiz token")
+
+@router.post("/login", response_model=Token)
+def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == form.username).first()
+    if not user or not verify_password(form.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Kullanıcı adı veya şifre hatalı")
+    token = create_token({"sub": user.username})
+    return {"access_token": token, "token_type": "bearer", "username": user.username, "role": user.role}
+
+@router.post("/register", response_model=UserOut)
+def register(data: UserCreate, db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.username == data.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu kullanıcı adı zaten alınmış")
+    user = User(
+        username=data.username,
+        password_hash=hash_password(data.password),
+        role=data.role
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+@router.get("/me", response_model=UserOut)
+def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@router.get("/users", response_model=list[UserOut])
+def get_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Yetkisiz")
+    return db.query(User).all()

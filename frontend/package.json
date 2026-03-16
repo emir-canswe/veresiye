@@ -1,0 +1,48 @@
+{
+  "name": "veresiye",
+  "version": "1.0.0",
+  "description": "Cari Hesap Yönetim Sistemi",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron": "NODE_ENV=development electron .",
+    "electron:win": "set NODE_ENV=development&& electron .",
+    "dev:all": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && npm run electron:win\"",
+    "dist": "npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "com.veresiye.app",
+    "productName": "Veresiye",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "electron/icon.png"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ]
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.24.0",
+    "recharts": "^3.8.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "vite": "^5.3.1",
+    "wait-on": "^7.2.0"
+  }
+}

@@ -1,0 +1,136 @@
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from sqlalchemy.orm import Session
+from database import get_db
+from models.models import BankTransaction, CustomerIBAN, Customer
+from schemas.schemas import BankTransactionOut, BankTransactionMatch
+import hashlib
+import pandas as pd
+import pdfplumber
+import io
+from datetime import datetime
+
+router = APIRouter(prefix="/bank", tags=["Banka Ekstresi"])
+
+def parse_pdf(content: bytes) -> list[dict]:
+    transactions = []
+    with pdfplumber.open(io.BytesIO(content)) as pdf:
+        for page in pdf.pages:
+            table = page.extract_table()
+            if not table:
+                continue
+            for row in table[1:]:
+                if not row or len(row) < 4:
+                    continue
+                try:
+                    transactions.append({
+                        "date": row[0],
+                        "sender_name": row[1],
+                        "sender_iban": row[2],
+                        "amount": float(str(row[3]).replace(",", ".").replace(" ", "")),
+                        "description": row[4] if len(row) > 4 else ""
+                    })
+                except:
+                    continue
+    return transactions
+
+def parse_excel(content: bytes) -> list[dict]:
+    df = pd.read_excel(io.BytesIO(content))
+    df.columns = [str(c).lower().strip() for c in df.columns]
+    transactions = []
+    for _, row in df.iterrows():
+        try:
+            transactions.append({
+                "date": str(row.get("tarih", row.get("date", ""))),
+                "sender_name": str(row.get("gonderen", row.get("sender", ""))),
+                "sender_iban": str(row.get("iban", "")),
+                "amount": float(str(row.get("tutar", row.get("amount", 0))).replace(",", ".")),
+                "description": str(row.get("aciklama", row.get("description", "")))
+            })
+        except:
+            continue
+    return transactions
+
+def make_hash(date: str, amount: float, iban: str) -> str:
+    raw = f"{date}_{amount}_{iban}"
+    return hashlib.md5(raw.encode()).hexdigest()
+
+def auto_match(db: Session, transaction: BankTransaction):
+    if transaction.sender_iban:
+        iban_match = db.query(CustomerIBAN).filter(
+            CustomerIBAN.iban == transaction.sender_iban
+        ).first()
+        if iban_match:
+            transaction.matched_customer_id = iban_match.customer_id
+            transaction.is_matched = True
+            return
+
+    if transaction.sender_name:
+        name = transaction.sender_name.lower()
+        customers = db.query(Customer).all()
+        for customer in customers:
+            if customer.name.lower() in name or name in customer.name.lower():
+                transaction.matched_customer_id = customer.id
+                transaction.is_matched = True
+                return
+
+@router.post("/upload", response_model=list[BankTransactionOut])
+async def upload_statement(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    content = await file.read()
+    filename = file.filename.lower()
+
+    if filename.endswith(".pdf"):
+        rows = parse_pdf(content)
+    elif filename.endswith(".xlsx") or filename.endswith(".xls"):
+        rows = parse_excel(content)
+    elif filename.endswith(".csv"):
+        df = pd.read_csv(io.BytesIO(content))
+        rows = parse_excel(content)
+    else:
+        raise HTTPException(status_code=400, detail="Desteklenmeyen dosya formatı. PDF, Excel veya CSV yükleyin.")
+
+    saved = []
+    for row in rows:
+        tx_hash = make_hash(str(row["date"]), row["amount"], str(row.get("sender_iban", "")))
+        existing = db.query(BankTransaction).filter(BankTransaction.transaction_hash == tx_hash).first()
+        if existing:
+            continue
+
+        try:
+            date = datetime.strptime(str(row["date"]), "%d.%m.%Y")
+        except:
+            date = datetime.utcnow()
+
+        tx = BankTransaction(
+            transaction_hash=tx_hash,
+            date=date,
+            sender_name=row.get("sender_name"),
+            sender_iban=row.get("sender_iban"),
+            amount=row["amount"],
+            description=row.get("description")
+        )
+        auto_match(db, tx)
+        db.add(tx)
+        saved.append(tx)
+
+    db.commit()
+    for tx in saved:
+        db.refresh(tx)
+    return saved
+
+@router.get("/transactions", response_model=list[BankTransactionOut])
+def get_transactions(db: Session = Depends(get_db)):
+    return db.query(BankTransaction).order_by(BankTransaction.date.desc()).all()
+
+@router.get("/unmatched", response_model=list[BankTransactionOut])
+def get_unmatched(db: Session = Depends(get_db)):
+    return db.query(BankTransaction).filter(BankTransaction.is_matched == False).all()
+
+@router.post("/transactions/{tx_id}/match")
+def match_transaction(tx_id: int, data: BankTransactionMatch, db: Session = Depends(get_db)):
+    tx = db.query(BankTransaction).filter(BankTransaction.id == tx_id).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="İşlem bulunamadı")
+    tx.matched_customer_id = data.customer_id
+    tx.is_matched = True
+    db.commit()
+    return {"message": "Eşleştirildi"}
