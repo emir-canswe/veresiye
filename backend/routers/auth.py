@@ -11,7 +11,7 @@ from typing import Optional
 
 SECRET_KEY = "veresiye_super_secret_key_2024"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 gün
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -36,6 +36,13 @@ class UserOut(BaseModel):
     created_at: datetime
     class Config:
         from_attributes = True
+
+class UpdateUsername(BaseModel):
+    new_username: str
+
+class UpdatePassword(BaseModel):
+    current_password: str
+    new_password: str
 
 def verify_password(plain, hashed):
     return pwd_context.verify(plain, hashed)
@@ -88,6 +95,25 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)):
     return current_user
+
+@router.put("/update-username")
+def update_username(data: UpdateUsername, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.username == data.new_username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu kullanıcı adı zaten alınmış!")
+    current_user.username = data.new_username
+    db.commit()
+    return {"message": "Kullanıcı adı güncellendi"}
+
+@router.put("/update-password")
+def update_password(data: UpdatePassword, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not verify_password(data.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Mevcut şifre hatalı!")
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Yeni şifre en az 6 karakter olmalı!")
+    current_user.password_hash = hash_password(data.new_password)
+    db.commit()
+    return {"message": "Şifre güncellendi"}
 
 @router.get("/users", response_model=list[UserOut])
 def get_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
