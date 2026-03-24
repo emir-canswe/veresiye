@@ -23,6 +23,7 @@ class Customer(Base):
     phone = Column(String)
     address = Column(Text)
     notes = Column(Text)
+    son_odeme_tarihi = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     ibans = relationship("CustomerIBAN", back_populates="customer")
     debts = relationship("Debt", back_populates="customer")
@@ -58,7 +59,7 @@ class Payment(Base):
     bank_transaction_id = Column(Integer, ForeignKey("bank_transactions.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     customer = relationship("Customer", back_populates="payments")
-    bank_transaction = relationship("BankTransaction", back_populates="payment")
+    bank_transaction = relationship("BankTransaction", back_populates="payment", uselist=False)
 
 class BankTransaction(Base):
     __tablename__ = "bank_transactions"

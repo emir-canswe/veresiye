@@ -41,8 +41,6 @@ function App() {
         <div className="navbar-nav">
           <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>📊 Dashboard</NavLink>
           <NavLink to="/customers" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>👥 Müşteriler</NavLink>
-          <NavLink to="/debts" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>📋 Borçlar</NavLink>
-          <NavLink to="/payments" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>💰 Ödemeler</NavLink>
           <NavLink to="/bank" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>🏦 Banka Ekstresi</NavLink>
           <NavLink to="/reports" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>📈 Raporlar</NavLink>
         </div>

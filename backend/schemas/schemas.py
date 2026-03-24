@@ -7,7 +7,6 @@ class PaymentMethod(str, Enum):
     banka = "banka"
     nakit = "nakit"
 
-# --- Customer ---
 class CustomerIBANBase(BaseModel):
     iban: str
     label: Optional[str] = None
@@ -22,6 +21,7 @@ class CustomerBase(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     notes: Optional[str] = None
+    son_odeme_tarihi: Optional[datetime] = None
 
 class CustomerCreate(CustomerBase):
     ibans: Optional[list[CustomerIBANBase]] = []
@@ -33,7 +33,6 @@ class CustomerOut(CustomerBase):
     class Config:
         from_attributes = True
 
-# --- Debt ---
 class DebtBase(BaseModel):
     customer_id: int
     amount: float
@@ -50,7 +49,6 @@ class DebtOut(DebtBase):
     class Config:
         from_attributes = True
 
-# --- Payment ---
 class PaymentBase(BaseModel):
     customer_id: int
     amount: float
@@ -68,7 +66,6 @@ class PaymentOut(PaymentBase):
     class Config:
         from_attributes = True
 
-# --- BankTransaction ---
 class BankTransactionOut(BaseModel):
     id: int
     date: datetime
@@ -84,7 +81,6 @@ class BankTransactionOut(BaseModel):
 class BankTransactionMatch(BaseModel):
     customer_id: int
 
-# --- Dashboard ---
 class DashboardOut(BaseModel):
     toplam_alacak: float
     toplam_tahsilat: float

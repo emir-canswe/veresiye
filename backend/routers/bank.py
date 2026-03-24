@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from database import get_db
-from models.models import BankTransaction, CustomerIBAN, Customer
+from models.models import BankTransaction, CustomerIBAN, Customer, Payment
+from models.models import PaymentMethod
 from schemas.schemas import BankTransactionOut, BankTransactionMatch
 import hashlib
 import pandas as pd
@@ -63,7 +64,6 @@ def auto_match(db: Session, transaction: BankTransaction):
             transaction.matched_customer_id = iban_match.customer_id
             transaction.is_matched = True
             return
-
     if transaction.sender_name:
         name = transaction.sender_name.lower()
         customers = db.query(Customer).all()
@@ -83,10 +83,9 @@ async def upload_statement(file: UploadFile = File(...), db: Session = Depends(g
     elif filename.endswith(".xlsx") or filename.endswith(".xls"):
         rows = parse_excel(content)
     elif filename.endswith(".csv"):
-        df = pd.read_csv(io.BytesIO(content))
         rows = parse_excel(content)
     else:
-        raise HTTPException(status_code=400, detail="Desteklenmeyen dosya formatı. PDF, Excel veya CSV yükleyin.")
+        raise HTTPException(status_code=400, detail="Desteklenmeyen dosya formatı.")
 
     saved = []
     for row in rows:
@@ -94,7 +93,6 @@ async def upload_statement(file: UploadFile = File(...), db: Session = Depends(g
         existing = db.query(BankTransaction).filter(BankTransaction.transaction_hash == tx_hash).first()
         if existing:
             continue
-
         try:
             date = datetime.strptime(str(row["date"]), "%d.%m.%Y")
         except:
@@ -134,3 +132,28 @@ def match_transaction(tx_id: int, data: BankTransactionMatch, db: Session = Depe
     tx.is_matched = True
     db.commit()
     return {"message": "Eşleştirildi"}
+
+@router.post("/transactions/{tx_id}/convert")
+def convert_to_payment(tx_id: int, db: Session = Depends(get_db)):
+    tx = db.query(BankTransaction).filter(BankTransaction.id == tx_id).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="İşlem bulunamadı")
+    if not tx.is_matched or not tx.matched_customer_id:
+        raise HTTPException(status_code=400, detail="Önce müşteriyle eşleştirin")
+
+    existing = db.query(Payment).filter(Payment.bank_transaction_id == tx_id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu işlem zaten ödemeye dönüştürüldü")
+
+    payment = Payment(
+        customer_id=tx.matched_customer_id,
+        amount=tx.amount,
+        method=PaymentMethod.banka,
+        description=tx.description or f"Banka transferi — {tx.sender_name or ''}",
+        date=tx.date,
+        bank_transaction_id=tx.id
+    )
+    db.add(payment)
+    db.commit()
+    db.refresh(payment)
+    return {"message": "Ödeme kaydı oluşturuldu", "payment_id": payment.id}
