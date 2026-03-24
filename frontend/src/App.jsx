@@ -41,11 +41,10 @@ function App() {
         <div className="navbar-nav">
           <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>📊 Dashboard</NavLink>
           <NavLink to="/customers" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>👥 Müşteriler</NavLink>
-          <NavLink to="/bank" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>🏦 Banka Ekstresi</NavLink>
+          <NavLink to="/bank" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>🏦 Akıllı Ödeme</NavLink>
           <NavLink to="/reports" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>📈 Raporlar</NavLink>
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 13, color: '#6b7280' }}>👤 {user.username}</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>⚙️ Ayarlar</NavLink>
         </div>
       </nav>
