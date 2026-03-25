@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import API from '../api'
+
 const fmt = (n) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(n)
 
 export default function Customers() {
@@ -15,7 +16,7 @@ export default function Customers() {
     const [showPaymentModal, setShowPaymentModal] = useState(false)
     const [selectedCustomer, setSelectedCustomer] = useState(null)
     const [form, setForm] = useState({ name: '', phone: '', address: '', notes: '', iban: '', son_odeme_tarihi: '', email: '' })
-    const [editForm, setEditForm] = useState({ name: '', phone: '', address: '', notes: '', son_odeme_tarihi: '' })
+    const [editForm, setEditForm] = useState({ name: '', phone: '', address: '', notes: '', son_odeme_tarihi: '', email: '' })
     const [debtForm, setDebtForm] = useState({ amount: '', description: '', category: '' })
     const [paymentForm, setPaymentForm] = useState({ amount: '', method: 'nakit', description: '' })
     const navigate = useNavigate()
@@ -47,6 +48,14 @@ export default function Customers() {
         return Math.floor((new Date() - new Date(customer.son_odeme_tarihi)) / (1000 * 60 * 60 * 24))
     }
 
+    const getCustomerEmail = (customer) => {
+        if (!customer?.notes) return null
+        for (const line of customer.notes.split('\n')) {
+            if (line.startsWith('email:')) return line.replace('email:', '').trim()
+        }
+        return null
+    }
+
     const filtered = customers.filter(c =>
         c.name.toLowerCase().includes(search.toLowerCase()) ||
         (c.phone && c.phone.includes(search)) ||
@@ -62,10 +71,13 @@ export default function Customers() {
             name: customer.name || '',
             phone: customer.phone || '',
             address: customer.address || '',
-            notes: customer.notes || '',
+            notes: customer.notes
+                ? customer.notes.split('\n').filter(l => !l.startsWith('email:')).join('\n')
+                : '',
             son_odeme_tarihi: customer.son_odeme_tarihi
                 ? new Date(customer.son_odeme_tarihi).toISOString().split('T')[0]
-                : ''
+                : '',
+            email: getCustomerEmail(customer) || ''
         })
         setShowEditModal(true)
     }
@@ -93,11 +105,15 @@ export default function Customers() {
 
     const saveEdit = async () => {
         try {
+            const notesWithEmail = editForm.email
+                ? `email:${editForm.email}${editForm.notes ? '\n' + editForm.notes : ''}`
+                : editForm.notes
+
             await axios.put(`${API}/customers/${selectedCustomer.id}`, {
                 name: editForm.name,
                 phone: editForm.phone,
                 address: editForm.address,
-                notes: editForm.notes,
+                notes: notesWithEmail,
                 son_odeme_tarihi: editForm.son_odeme_tarihi || null,
                 ibans: []
             })
@@ -179,6 +195,7 @@ export default function Customers() {
                                 <tr>
                                     <th>Ad Soyad</th>
                                     <th>Telefon</th>
+                                    <th>E-posta</th>
                                     <th>Son Ödeme</th>
                                     <th>Kayıt Tarihi</th>
                                     <th style={{ textAlign: 'right' }}>Kalan Borç</th>
@@ -190,6 +207,7 @@ export default function Customers() {
                                     const balance = getBalance(c.id)
                                     const overdue = isOverdue(c)
                                     const days = getDaysSincePayment(c)
+                                    const email = getCustomerEmail(c)
                                     return (
                                         <tr key={c.id} style={{ background: overdue ? '#fff5f5' : 'white' }}>
                                             <td>
@@ -204,6 +222,7 @@ export default function Customers() {
                                                 </div>
                                             </td>
                                             <td>{c.phone || '-'}</td>
+                                            <td style={{ fontSize: 12, color: '#6b7280' }}>{email || '-'}</td>
                                             <td>
                                                 {c.son_odeme_tarihi ? (
                                                     <div>
@@ -285,13 +304,17 @@ export default function Customers() {
                         </div>
                         <div className="form-row">
                             <div className="form-group">
-                                <label>Son Ödeme Tarihi</label>
-                                <input type="date" value={form.son_odeme_tarihi} onChange={e => setForm({ ...form, son_odeme_tarihi: e.target.value })} />
+                                <label>E-posta</label>
+                                <input
+                                    type="email"
+                                    value={form.email}
+                                    onChange={e => setForm({ ...form, email: e.target.value })}
+                                    placeholder="musteri@gmail.com"
+                                />
                             </div>
                             <div className="form-group">
-                                <label>Kayıt Tarihi</label>
-                                <input type="text" value={new Date().toLocaleDateString('tr-TR')} disabled
-                                    style={{ background: '#f9fafb', color: '#6b7280' }} />
+                                <label>Son Ödeme Tarihi</label>
+                                <input type="date" value={form.son_odeme_tarihi} onChange={e => setForm({ ...form, son_odeme_tarihi: e.target.value })} />
                             </div>
                         </div>
                         <div className="form-group">
@@ -325,13 +348,24 @@ export default function Customers() {
                                 <input value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} placeholder="05XX XXX XX XX" />
                             </div>
                             <div className="form-group">
+                                <label>E-posta</label>
+                                <input
+                                    type="email"
+                                    value={editForm.email}
+                                    onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                                    placeholder="musteri@gmail.com"
+                                />
+                            </div>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group">
                                 <label>Son Ödeme Tarihi</label>
                                 <input type="date" value={editForm.son_odeme_tarihi} onChange={e => setEditForm({ ...editForm, son_odeme_tarihi: e.target.value })} />
                             </div>
-                        </div>
-                        <div className="form-group">
-                            <label>Adres</label>
-                            <input value={editForm.address} onChange={e => setEditForm({ ...editForm, address: e.target.value })} />
+                            <div className="form-group">
+                                <label>Adres</label>
+                                <input value={editForm.address} onChange={e => setEditForm({ ...editForm, address: e.target.value })} />
+                            </div>
                         </div>
                         <div className="form-group">
                             <label>Notlar</label>
