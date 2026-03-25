@@ -4,6 +4,7 @@ from database import get_db
 from models.models import BankTransaction, CustomerIBAN, Customer, Payment
 from models.models import PaymentMethod
 from schemas.schemas import BankTransactionOut, BankTransactionMatch
+from services.matcher import smart_match, auto_match_transaction
 import hashlib
 import pandas as pd
 import pdfplumber
@@ -55,24 +56,6 @@ def make_hash(date: str, amount: float, iban: str) -> str:
     raw = f"{date}_{amount}_{iban}"
     return hashlib.md5(raw.encode()).hexdigest()
 
-def auto_match(db: Session, transaction: BankTransaction):
-    if transaction.sender_iban:
-        iban_match = db.query(CustomerIBAN).filter(
-            CustomerIBAN.iban == transaction.sender_iban
-        ).first()
-        if iban_match:
-            transaction.matched_customer_id = iban_match.customer_id
-            transaction.is_matched = True
-            return
-    if transaction.sender_name:
-        name = transaction.sender_name.lower()
-        customers = db.query(Customer).all()
-        for customer in customers:
-            if customer.name.lower() in name or name in customer.name.lower():
-                transaction.matched_customer_id = customer.id
-                transaction.is_matched = True
-                return
-
 @router.post("/upload", response_model=list[BankTransactionOut])
 async def upload_statement(file: UploadFile = File(...), db: Session = Depends(get_db)):
     content = await file.read()
@@ -106,7 +89,13 @@ async def upload_statement(file: UploadFile = File(...), db: Session = Depends(g
             amount=row["amount"],
             description=row.get("description")
         )
-        auto_match(db, tx)
+
+        # Gelişmiş otomatik eşleştirme
+        best_match = auto_match_transaction(db, tx)
+        if best_match:
+            tx.matched_customer_id = best_match.customer_id
+            tx.is_matched = True
+
         db.add(tx)
         saved.append(tx)
 
@@ -132,6 +121,22 @@ def match_transaction(tx_id: int, data: BankTransactionMatch, db: Session = Depe
     tx.is_matched = True
     db.commit()
     return {"message": "Eşleştirildi"}
+
+@router.get("/transactions/{tx_id}/suggestions")
+def get_suggestions(tx_id: int, db: Session = Depends(get_db)):
+    tx = db.query(BankTransaction).filter(BankTransaction.id == tx_id).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="İşlem bulunamadı")
+    results = smart_match(db, tx)
+    customers = db.query(Customer).all()
+    customer_map = {c.id: c.name for c in customers}
+    return [
+        {
+            **r.to_dict(),
+            "customer_name": customer_map.get(r.customer_id, "Bilinmiyor")
+        }
+        for r in results
+    ]
 
 @router.post("/transactions/{tx_id}/convert")
 def convert_to_payment(tx_id: int, db: Session = Depends(get_db)):
