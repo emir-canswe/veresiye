@@ -3,8 +3,7 @@ import axios from 'axios'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
-
-const API = 'https://veresiye-backend.onrender.com'
+import API from '../api'
 const fmt = (n) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(n)
 
 export default function Reports() {

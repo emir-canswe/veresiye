@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import axios from 'axios'
-
-const API = 'https://veresiye-backend.onrender.com'
+import API from '../api'
 
 export default function Login({ onLogin }) {
     const [form, setForm] = useState({ username: '', password: '' })

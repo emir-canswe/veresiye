@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
-
-const API = 'https://veresiye-backend.onrender.com'
+import API from '../api'
 
 export default function Settings({ user, onLogout }) {
     const [stats, setStats] = useState(null)

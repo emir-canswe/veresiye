@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
-
-const API = 'https://veresiye-backend.onrender.com'
+import API from '../api'
 const fmt = (n) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(n)
 
 export default function BankStatement() {
