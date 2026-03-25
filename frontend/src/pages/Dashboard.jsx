@@ -117,7 +117,6 @@ export default function Dashboard() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-                {/* Grafik */}
                 <div className="card">
                     <h3 style={{ marginBottom: 20, fontSize: 16, fontWeight: 600 }}>Son 6 Ay — Borç & Tahsilat</h3>
                     <ResponsiveContainer width="100%" height={260}>
@@ -132,8 +131,6 @@ export default function Dashboard() {
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
-
-                {/* Kritik Hesaplar */}
                 <div className="card">
                     <h3 style={{ marginBottom: 20, fontSize: 16, fontWeight: 600 }}>Kritik Hesaplar</h3>
                     {topDebtors.length === 0 ? (
