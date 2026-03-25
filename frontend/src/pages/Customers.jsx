@@ -56,6 +56,10 @@ export default function Customers() {
         return null
     }
 
+    const getInitials = (name) => {
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    }
+
     const filtered = customers.filter(c =>
         c.name.toLowerCase().includes(search.toLowerCase()) ||
         (c.phone && c.phone.includes(search)) ||
@@ -71,12 +75,8 @@ export default function Customers() {
             name: customer.name || '',
             phone: customer.phone || '',
             address: customer.address || '',
-            notes: customer.notes
-                ? customer.notes.split('\n').filter(l => !l.startsWith('email:')).join('\n')
-                : '',
-            son_odeme_tarihi: customer.son_odeme_tarihi
-                ? new Date(customer.son_odeme_tarihi).toISOString().split('T')[0]
-                : '',
+            notes: customer.notes ? customer.notes.split('\n').filter(l => !l.startsWith('email:')).join('\n') : '',
+            son_odeme_tarihi: customer.son_odeme_tarihi ? new Date(customer.son_odeme_tarihi).toISOString().split('T')[0] : '',
             email: getCustomerEmail(customer) || ''
         })
         setShowEditModal(true)
@@ -87,11 +87,9 @@ export default function Customers() {
             const notesWithEmail = form.email
                 ? `email:${form.email}${form.notes ? '\n' + form.notes : ''}`
                 : form.notes
-
             const payload = {
                 name: form.name, phone: form.phone, address: form.address,
-                notes: notesWithEmail,
-                son_odeme_tarihi: form.son_odeme_tarihi || null,
+                notes: notesWithEmail, son_odeme_tarihi: form.son_odeme_tarihi || null,
                 ibans: form.iban ? [{ iban: form.iban, label: 'Ana IBAN' }] : []
             }
             await axios.post(`${API}/customers/`, payload)
@@ -108,14 +106,9 @@ export default function Customers() {
             const notesWithEmail = editForm.email
                 ? `email:${editForm.email}${editForm.notes ? '\n' + editForm.notes : ''}`
                 : editForm.notes
-
             await axios.put(`${API}/customers/${selectedCustomer.id}`, {
-                name: editForm.name,
-                phone: editForm.phone,
-                address: editForm.address,
-                notes: notesWithEmail,
-                son_odeme_tarihi: editForm.son_odeme_tarihi || null,
-                ibans: []
+                name: editForm.name, phone: editForm.phone, address: editForm.address,
+                notes: notesWithEmail, son_odeme_tarihi: editForm.son_odeme_tarihi || null, ibans: []
             })
             setShowEditModal(false)
             load()
@@ -126,10 +119,8 @@ export default function Customers() {
 
     const saveDebt = async () => {
         await axios.post(`${API}/debts/`, {
-            customer_id: selectedCustomer.id,
-            amount: parseFloat(debtForm.amount),
-            description: debtForm.description,
-            category: debtForm.category
+            customer_id: selectedCustomer.id, amount: parseFloat(debtForm.amount),
+            description: debtForm.description, category: debtForm.category
         })
         setShowDebtModal(false)
         setDebtForm({ amount: '', description: '', category: '' })
@@ -138,10 +129,8 @@ export default function Customers() {
 
     const savePayment = async () => {
         await axios.post(`${API}/payments/`, {
-            customer_id: selectedCustomer.id,
-            amount: parseFloat(paymentForm.amount),
-            method: paymentForm.method,
-            description: paymentForm.description
+            customer_id: selectedCustomer.id, amount: parseFloat(paymentForm.amount),
+            method: paymentForm.method, description: paymentForm.description
         })
         setShowPaymentModal(false)
         setPaymentForm({ amount: '', method: 'nakit', description: '' })
@@ -155,6 +144,9 @@ export default function Customers() {
             load()
         }
     }
+
+    const avatarColors = ['#1a56db', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4']
+    const getAvatarColor = (name) => avatarColors[name.charCodeAt(0) % avatarColors.length]
 
     return (
         <div>
@@ -173,14 +165,24 @@ export default function Customers() {
                 <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Yeni Müşteri</button>
             </div>
 
-            <div className="card">
-                <div style={{ marginBottom: 16 }}>
-                    <input
-                        style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14 }}
-                        placeholder="🔍 İsim, telefon veya IBAN ile ara..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                    />
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                {/* Arama */}
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9' }}>
+                    <div style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 16 }}>🔍</span>
+                        <input
+                            style={{
+                                width: '100%', padding: '10px 14px 10px 40px',
+                                border: '1.5px solid #e2e8f0', borderRadius: 10,
+                                fontSize: 14, outline: 'none', transition: 'border 0.18s'
+                            }}
+                            placeholder="İsim, telefon veya IBAN ile ara..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            onFocus={e => e.target.style.borderColor = '#1a56db'}
+                            onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                        />
+                    </div>
                 </div>
 
                 {filtered.length === 0 ? (
@@ -189,96 +191,133 @@ export default function Customers() {
                         <p>{search ? 'Arama sonucu bulunamadı' : 'Henüz müşteri yok'}</p>
                     </div>
                 ) : (
-                    <div className="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Ad Soyad</th>
-                                    <th>Telefon</th>
-                                    <th>E-posta</th>
-                                    <th>Son Ödeme</th>
-                                    <th>Kayıt Tarihi</th>
-                                    <th style={{ textAlign: 'right' }}>Kalan Borç</th>
-                                    <th style={{ textAlign: 'center' }}>İşlemler</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filtered.map(c => {
-                                    const balance = getBalance(c.id)
-                                    const overdue = isOverdue(c)
-                                    const days = getDaysSincePayment(c)
-                                    const email = getCustomerEmail(c)
-                                    return (
-                                        <tr key={c.id} style={{ background: overdue ? '#fff5f5' : 'white' }}>
-                                            <td>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                    {overdue && <span title="Geciken ödeme">⚠️</span>}
-                                                    <span
-                                                        style={{ color: 'var(--primary)', fontWeight: 600, cursor: 'pointer' }}
-                                                        onClick={() => navigate(`/customers/${c.id}`)}
-                                                    >
-                                                        {c.name}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td>{c.phone || '-'}</td>
-                                            <td style={{ fontSize: 12, color: '#6b7280' }}>{email || '-'}</td>
-                                            <td>
-                                                {c.son_odeme_tarihi ? (
-                                                    <div>
-                                                        <div style={{ fontSize: 13 }}>{new Date(c.son_odeme_tarihi).toLocaleDateString('tr-TR')}</div>
-                                                        {days !== null && balance > 0 && (
-                                                            <div style={{ fontSize: 11, color: days > 30 ? 'var(--danger)' : '#6b7280' }}>
-                                                                {days} gün önce
-                                                            </div>
-                                                        )}
+                    <div>
+                        {/* Tablo başlığı */}
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: '2.5fr 1.2fr 1.8fr 1.2fr 1.2fr 1.5fr',
+                            padding: '10px 20px',
+                            background: '#f8fafc',
+                            borderBottom: '1px solid #f1f5f9',
+                            fontSize: 11, fontWeight: 700, color: '#94a3b8',
+                            textTransform: 'uppercase', letterSpacing: '0.06em'
+                        }}>
+                            <div>Müşteri</div>
+                            <div>Telefon</div>
+                            <div>E-posta</div>
+                            <div>Son Ödeme</div>
+                            <div style={{ textAlign: 'right' }}>Kalan Borç</div>
+                            <div style={{ textAlign: 'center' }}>İşlemler</div>
+                        </div>
+
+                        {/* Satırlar */}
+                        {filtered.map((c, idx) => {
+                            const balance = getBalance(c.id)
+                            const overdue = isOverdue(c)
+                            const days = getDaysSincePayment(c)
+                            const email = getCustomerEmail(c)
+                            return (
+                                <div key={c.id}
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '2.5fr 1.2fr 1.8fr 1.2fr 1.2fr 1.5fr',
+                                        padding: '14px 20px',
+                                        borderBottom: idx < filtered.length - 1 ? '1px solid #f8fafc' : 'none',
+                                        background: overdue ? '#fff8f8' : 'white',
+                                        transition: 'background 0.15s',
+                                        alignItems: 'center'
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.background = overdue ? '#ffeaea' : '#f8fbff'}
+                                    onMouseLeave={e => e.currentTarget.style.background = overdue ? '#fff8f8' : 'white'}
+                                >
+                                    {/* Müşteri */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+                                        onClick={() => navigate(`/customers/${c.id}`)}>
+                                        <div style={{
+                                            width: 38, height: 38, borderRadius: '50%',
+                                            background: getAvatarColor(c.name),
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: 13, fontWeight: 700, color: 'white', flexShrink: 0
+                                        }}>
+                                            {getInitials(c.name)}
+                                        </div>
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: 14, color: '#111827', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                {overdue && <span title="Geciken ödeme" style={{ fontSize: 13 }}>⚠️</span>}
+                                                <span style={{ color: 'var(--primary)' }}>{c.name}</span>
+                                            </div>
+                                            <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                                                {new Date(c.created_at).toLocaleDateString('tr-TR')} tarihinde eklendi
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Telefon */}
+                                    <div style={{ fontSize: 13, color: '#374151' }}>{c.phone || <span style={{ color: '#d1d5db' }}>—</span>}</div>
+
+                                    {/* E-posta */}
+                                    <div style={{ fontSize: 12, color: '#6b7280' }}>
+                                        {email ? (
+                                            <span style={{ background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: 6, fontSize: 11 }}>
+                                                {email}
+                                            </span>
+                                        ) : <span style={{ color: '#d1d5db' }}>—</span>}
+                                    </div>
+
+                                    {/* Son Ödeme */}
+                                    <div>
+                                        {c.son_odeme_tarihi ? (
+                                            <div>
+                                                <div style={{ fontSize: 13, color: '#374151' }}>{new Date(c.son_odeme_tarihi).toLocaleDateString('tr-TR')}</div>
+                                                {days !== null && balance > 0 && (
+                                                    <div style={{ fontSize: 11, color: days > 30 ? 'var(--danger)' : '#9ca3af', marginTop: 2 }}>
+                                                        {days} gün önce
                                                     </div>
-                                                ) : (
-                                                    <span style={{ fontSize: 12, color: '#9ca3af' }}>Ödeme yok</span>
                                                 )}
-                                            </td>
-                                            <td style={{ fontSize: 13, color: '#6b7280' }}>
-                                                {new Date(c.created_at).toLocaleDateString('tr-TR')}
-                                            </td>
-                                            <td style={{ textAlign: 'right' }}>
-                                                <span style={{
-                                                    fontWeight: 700,
-                                                    color: balance > 0 ? 'var(--danger)' : balance < 0 ? 'var(--success)' : '#6b7280'
-                                                }}>
-                                                    {fmt(balance)}
-                                                </span>
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-                                                    <button className="btn btn-danger btn-sm"
-                                                        onClick={(e) => { e.stopPropagation(); setSelectedCustomer(c); setShowDebtModal(true) }}>
-                                                        + Borç
-                                                    </button>
-                                                    <button className="btn btn-sm"
-                                                        style={{ background: '#d1fae5', color: 'var(--success)' }}
-                                                        onClick={(e) => { e.stopPropagation(); setSelectedCustomer(c); setShowPaymentModal(true) }}>
-                                                        + Ödeme
-                                                    </button>
-                                                    <button className="btn btn-outline btn-sm"
-                                                        onClick={() => navigate(`/customers/${c.id}`)}>
-                                                        Detay
-                                                    </button>
-                                                    <button className="btn btn-sm"
-                                                        style={{ background: '#eff6ff', color: 'var(--primary)' }}
-                                                        onClick={(e) => openEditModal(e, c)}>
-                                                        ✏️ Düzenle
-                                                    </button>
-                                                    <button className="btn btn-danger btn-sm"
-                                                        onClick={(e) => remove(e, c.id)}>
-                                                        Sil
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
+                                            </div>
+                                        ) : <span style={{ color: '#d1d5db', fontSize: 13 }}>—</span>}
+                                    </div>
+
+                                    {/* Kalan Borç */}
+                                    <div style={{ textAlign: 'right' }}>
+                                        <span style={{
+                                            fontWeight: 700, fontSize: 15,
+                                            color: balance > 0 ? 'var(--danger)' : balance < 0 ? 'var(--success)' : '#d1d5db'
+                                        }}>
+                                            {fmt(balance)}
+                                        </span>
+                                    </div>
+
+                                    {/* İşlemler */}
+                                    <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
+                                        <button title="Borç Ekle" onClick={(e) => { e.stopPropagation(); setSelectedCustomer(c); setShowDebtModal(true) }}
+                                            style={{ padding: '5px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, background: '#fde8e8', color: '#e02424', transition: 'all 0.15s' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#fbd5d5'}
+                                            onMouseLeave={e => e.currentTarget.style.background = '#fde8e8'}>
+                                            +Borç
+                                        </button>
+                                        <button title="Ödeme Al" onClick={(e) => { e.stopPropagation(); setSelectedCustomer(c); setShowPaymentModal(true) }}
+                                            style={{ padding: '5px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, background: '#def7ec', color: '#057a55', transition: 'all 0.15s' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#bcf0da'}
+                                            onMouseLeave={e => e.currentTarget.style.background = '#def7ec'}>
+                                            +Ödeme
+                                        </button>
+                                        <button title="Düzenle" onClick={(e) => openEditModal(e, c)}
+                                            style={{ padding: '5px 8px', borderRadius: 7, border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: 13, background: 'white', color: '#6b7280', transition: 'all 0.15s' }}
+                                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#1a56db'; e.currentTarget.style.color = '#1a56db' }}
+                                            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#6b7280' }}>
+                                            ✏️
+                                        </button>
+                                        <button title="Sil" onClick={(e) => remove(e, c.id)}
+                                            style={{ padding: '5px 8px', borderRadius: 7, border: '1px solid #fca5a5', cursor: 'pointer', fontSize: 13, background: 'white', color: '#e02424', transition: 'all 0.15s' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#fde8e8'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </div>
+                            )
+                        })}
                     </div>
                 )}
             </div>
@@ -305,12 +344,7 @@ export default function Customers() {
                         <div className="form-row">
                             <div className="form-group">
                                 <label>E-posta</label>
-                                <input
-                                    type="email"
-                                    value={form.email}
-                                    onChange={e => setForm({ ...form, email: e.target.value })}
-                                    placeholder="musteri@gmail.com"
-                                />
+                                <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="musteri@gmail.com" />
                             </div>
                             <div className="form-group">
                                 <label>Son Ödeme Tarihi</label>
@@ -349,12 +383,7 @@ export default function Customers() {
                             </div>
                             <div className="form-group">
                                 <label>E-posta</label>
-                                <input
-                                    type="email"
-                                    value={editForm.email}
-                                    onChange={e => setEditForm({ ...editForm, email: e.target.value })}
-                                    placeholder="musteri@gmail.com"
-                                />
+                                <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} placeholder="musteri@gmail.com" />
                             </div>
                         </div>
                         <div className="form-row">
