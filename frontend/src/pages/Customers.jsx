@@ -14,7 +14,7 @@ export default function Customers() {
     const [showDebtModal, setShowDebtModal] = useState(false)
     const [showPaymentModal, setShowPaymentModal] = useState(false)
     const [selectedCustomer, setSelectedCustomer] = useState(null)
-    const [form, setForm] = useState({ name: '', phone: '', address: '', notes: '', iban: '', son_odeme_tarihi: '' })
+    const [form, setForm] = useState({ name: '', phone: '', address: '', notes: '', iban: '', son_odeme_tarihi: '', email: '' })
     const [editForm, setEditForm] = useState({ name: '', phone: '', address: '', notes: '', son_odeme_tarihi: '' })
     const [debtForm, setDebtForm] = useState({ amount: '', description: '', category: '' })
     const [paymentForm, setPaymentForm] = useState({ amount: '', method: 'nakit', description: '' })
@@ -72,14 +72,19 @@ export default function Customers() {
 
     const save = async () => {
         try {
+            const notesWithEmail = form.email
+                ? `email:${form.email}${form.notes ? '\n' + form.notes : ''}`
+                : form.notes
+
             const payload = {
-                name: form.name, phone: form.phone, address: form.address, notes: form.notes,
+                name: form.name, phone: form.phone, address: form.address,
+                notes: notesWithEmail,
                 son_odeme_tarihi: form.son_odeme_tarihi || null,
                 ibans: form.iban ? [{ iban: form.iban, label: 'Ana IBAN' }] : []
             }
             await axios.post(`${API}/customers/`, payload)
             setShowModal(false)
-            setForm({ name: '', phone: '', address: '', notes: '', iban: '', son_odeme_tarihi: '' })
+            setForm({ name: '', phone: '', address: '', notes: '', iban: '', son_odeme_tarihi: '', email: '' })
             load()
         } catch (e) {
             alert(e.response?.data?.detail || 'Kayıt sırasında hata oluştu!')

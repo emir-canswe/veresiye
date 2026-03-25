@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine
 from models.models import Base
 from routers import customers, debts, payments, dashboard, bank
-from routers import auth, backup, stock, finance
+from routers import auth, backup, stock, finance, notifications
 
 Base.metadata.create_all(bind=engine)
 
@@ -26,6 +26,7 @@ app.include_router(bank.router)
 app.include_router(backup.router)
 app.include_router(stock.router)
 app.include_router(finance.router)
+app.include_router(notifications.router)
 
 @app.get("/")
 def root():

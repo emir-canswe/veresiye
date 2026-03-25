@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import API from '../api'
+
 const fmt = (n) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(n)
 
 export default function CustomerDetail() {
@@ -14,6 +15,7 @@ export default function CustomerDetail() {
     const [showPaymentModal, setShowPaymentModal] = useState(false)
     const [debtForm, setDebtForm] = useState({ amount: '', description: '', category: '' })
     const [paymentForm, setPaymentForm] = useState({ amount: '', method: 'nakit', description: '' })
+    const [sending, setSending] = useState(false)
 
     const load = () => {
         axios.get(`${API}/customers/${id}`).then(r => setCustomer(r.data))
@@ -56,7 +58,32 @@ export default function CustomerDetail() {
         load()
     }
 
-    if (!customer) return <div style={{ padding: 40 }}>Yükleniyor...</div>
+    const sendNotification = async () => {
+        setSending(true)
+        try {
+            await axios.post(`${API}/notifications/send-single/${id}`)
+            alert('✅ Bildirim e-postası gönderildi!')
+        } catch (e) {
+            alert(e.response?.data?.detail || 'Hata oluştu!')
+        }
+        setSending(false)
+    }
+
+    const getCustomerEmail = () => {
+        if (!customer?.notes) return null
+        for (const line of customer.notes.split('\n')) {
+            if (line.startsWith('email:')) return line.replace('email:', '').trim()
+        }
+        return null
+    }
+
+    if (!customer) return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200 }}>
+            <div style={{ color: '#6b7280' }}>Yükleniyor...</div>
+        </div>
+    )
+
+    const email = getCustomerEmail()
 
     return (
         <div>
@@ -68,15 +95,37 @@ export default function CustomerDetail() {
                         <h1 className="page-title">{customer.name}</h1>
                         <p className="page-subtitle">
                             {customer.phone && `📞 ${customer.phone}`}
+                            {customer.phone && email && ' · '}
+                            {email && `📧 ${email}`}
                             {customer.ibans?.[0]?.iban && ` · 🏦 ${customer.ibans[0].iban}`}
                         </p>
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
+                    {remaining > 0 && (
+                        <button
+                            className="btn btn-sm"
+                            style={{ background: '#fef3c7', color: '#c27803', border: '1px solid #fcd34d' }}
+                            onClick={sendNotification}
+                            disabled={sending}
+                        >
+                            {sending ? '...' : '📧 Bildirim Gönder'}
+                        </button>
+                    )}
                     <button className="btn btn-outline" onClick={() => setShowDebtModal(true)}>+ Borç Ekle</button>
                     <button className="btn btn-primary" onClick={() => setShowPaymentModal(true)}>+ Ödeme Al</button>
                 </div>
             </div>
+
+            {/* E-posta uyarısı */}
+            {remaining > 0 && !email && (
+                <div style={{
+                    background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 10,
+                    padding: '12px 16px', marginBottom: 20, fontSize: 13, color: '#c27803'
+                }}>
+                    💡 Bildirim göndermek için müşteriyi düzenleyin ve e-posta adresi ekleyin.
+                </div>
+            )}
 
             {/* Özet kartlar */}
             <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
@@ -90,7 +139,9 @@ export default function CustomerDetail() {
                     <div className="stat-label">Toplam Ödeme</div>
                     <div className="stat-value success">{fmt(totalPayment)}</div>
                 </div>
-                <div className="stat-card" style={{ border: remaining > 0 ? '2px solid #fca5a5' : '2px solid #6ee7b7' }}>
+                <div className="stat-card" style={{
+                    border: remaining > 0 ? '2px solid #fca5a5' : '2px solid #6ee7b7'
+                }}>
                     <div className={`stat-icon ${remaining > 0 ? 'yellow' : 'green'}`}>
                         {remaining > 0 ? '⏳' : '✅'}
                     </div>
@@ -98,6 +149,29 @@ export default function CustomerDetail() {
                     <div className={`stat-value ${remaining > 0 ? 'danger' : 'success'}`}>{fmt(remaining)}</div>
                 </div>
             </div>
+
+            {/* Müşteri bilgileri */}
+            {(customer.address || customer.notes) && (
+                <div className="card" style={{ marginBottom: 24 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Müşteri Bilgileri</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                        {customer.address && (
+                            <div>
+                                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>📍 Adres</div>
+                                <div style={{ fontSize: 14 }}>{customer.address}</div>
+                            </div>
+                        )}
+                        {customer.notes && (
+                            <div>
+                                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>📝 Notlar</div>
+                                <div style={{ fontSize: 14, whiteSpace: 'pre-line' }}>
+                                    {customer.notes.split('\n').filter(l => !l.startsWith('email:')).join('\n')}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Cari hesap tablosu */}
             <div className="card">
