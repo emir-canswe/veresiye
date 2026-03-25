@@ -98,8 +98,6 @@ export default function BankStatement() {
             <div className="info-box">
                 💡 Sistem <strong>7 farklı algoritma</strong> ile eşleştirme yapar: IBAN, isim benzerliği, telefon, açıklama analizi, tutar eşleşmesi ve geçmiş öğrenimi. <strong>%85+</strong> güven skorunda otomatik eşleştirir.
             </div>
-
-            {/* Eşleşmeyi bekleyenler */}
             {unmatched.length > 0 && (
                 <div className="card" style={{ borderLeft: '4px solid var(--warning)' }}>
                     <h3 style={{ marginBottom: 16, fontSize: 15, fontWeight: 600, color: 'var(--warning)' }}>
