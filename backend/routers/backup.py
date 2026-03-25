@@ -1,63 +1,156 @@
-from fastapi import APIRouter, Depends
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from database import get_db
-from models.models import Customer, Debt, Payment, BankTransaction, CustomerIBAN
-import json
-import os
-from datetime import datetime
+from models.models import User
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
+from pydantic import BaseModel
+from typing import Optional
 
-router = APIRouter(prefix="/backup", tags=["Yedekleme"])
+SECRET_KEY = "veresiye_super_secret_key_2024"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
-@router.get("/export")
-def export_backup(db: Session = Depends(get_db)):
-    customers = db.query(Customer).all()
-    debts = db.query(Debt).all()
-    payments = db.query(Payment).all()
-    transactions = db.query(BankTransaction).all()
-    ibans = db.query(CustomerIBAN).all()
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-    data = {
-        "backup_date": datetime.utcnow().isoformat(),
-        "version": "1.0",
-        "customers": [
-            {"id": c.id, "name": c.name, "phone": c.phone, "address": c.address, "notes": c.notes, "created_at": str(c.created_at)}
-            for c in customers
-        ],
-        "customer_ibans": [
-            {"id": i.id, "customer_id": i.customer_id, "iban": i.iban, "label": i.label}
-            for i in ibans
-        ],
-        "debts": [
-            {"id": d.id, "customer_id": d.customer_id, "amount": d.amount, "description": d.description,
-             "category": d.category, "date": str(d.date), "created_at": str(d.created_at)}
-            for d in debts
-        ],
-        "payments": [
-            {"id": p.id, "customer_id": p.customer_id, "amount": p.amount, "method": p.method,
-             "description": p.description, "date": str(p.date), "created_at": str(p.created_at)}
-            for p in payments
-        ],
-        "bank_transactions": [
-            {"id": t.id, "transaction_hash": t.transaction_hash, "date": str(t.date),
-             "sender_name": t.sender_name, "sender_iban": t.sender_iban, "amount": t.amount,
-             "description": t.description, "is_matched": t.is_matched, "matched_customer_id": t.matched_customer_id}
-            for t in transactions
-        ]
-    }
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
-    filename = f"veresiye_yedek_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    filepath = os.path.join(os.path.dirname(__file__), '..', filename)
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    username: str
+    role: str
 
-    return FileResponse(filepath, filename=filename, media_type='application/json')
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    role: Optional[str] = "calisan"
 
-@router.get("/stats")
-def backup_stats(db: Session = Depends(get_db)):
-    return {
-        "musteri_sayisi": db.query(Customer).count(),
-        "borc_sayisi": db.query(Debt).count(),
-        "odeme_sayisi": db.query(Payment).count(),
-        "banka_islemi_sayisi": db.query(BankTransaction).count(),
-    }
+class UserOut(BaseModel):
+    id: int
+    username: str
+    role: str
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class UpdateUsername(BaseModel):
+    new_username: str
+
+class UpdatePassword(BaseModel):
+    current_password: str
+    new_password: str
+
+def verify_password(plain, hashed):
+    return pwd_context.verify(plain, hashed)
+
+def hash_password(password):
+    return pwd_context.hash(password)
+
+def create_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if not username:
+            raise HTTPException(status_code=401, detail="Geçersiz token")
+        user = db.query(User).filter(User.username == username).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="Kullanıcı bulunamadı")
+        return user
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Geçersiz token")
+
+def require_admin(current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Bu işlem için admin yetkisi gerekli!")
+    return current_user
+
+def require_admin_or_muhasebeci(current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["admin", "muhasebeci"]:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok!")
+    return current_user
+
+@router.post("/login", response_model=Token)
+def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == form.username).first()
+    if not user or not verify_password(form.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Kullanıcı adı veya şifre hatalı")
+    token = create_token({"sub": user.username})
+    return {"access_token": token, "token_type": "bearer", "username": user.username, "role": user.role}
+
+@router.post("/register", response_model=UserOut)
+def register(data: UserCreate, db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.username == data.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu kullanıcı adı zaten alınmış")
+    user = User(
+        username=data.username,
+        password_hash=hash_password(data.password),
+        role=data.role
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+@router.get("/me", response_model=UserOut)
+def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@router.put("/update-username")
+def update_username(data: UpdateUsername, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.username == data.new_username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu kullanıcı adı zaten alınmış!")
+    current_user.username = data.new_username
+    db.commit()
+    return {"message": "Kullanıcı adı güncellendi"}
+
+@router.put("/update-password")
+def update_password(data: UpdatePassword, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not verify_password(data.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Mevcut şifre hatalı!")
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Yeni şifre en az 6 karakter olmalı!")
+    current_user.password_hash = hash_password(data.new_password)
+    db.commit()
+    return {"message": "Şifre güncellendi"}
+
+@router.get("/users", response_model=list[UserOut])
+def get_users(db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    return db.query(User).all()
+
+@router.post("/users", response_model=UserOut)
+def create_user(data: UserCreate, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    existing = db.query(User).filter(User.username == data.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu kullanıcı adı zaten alınmış!")
+    user = User(
+        username=data.username,
+        password_hash=hash_password(data.password),
+        role=data.role
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+@router.delete("/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Kendinizi silemezsiniz!")
+    db.delete(user)
+    db.commit()
+    return {"message": "Kullanıcı silindi"}

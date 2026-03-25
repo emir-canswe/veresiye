@@ -2,6 +2,145 @@ import { useEffect, useState } from 'react'
 import axios from 'axios'
 import API from '../api'
 
+function UserManagement() {
+    const [users, setUsers] = useState([])
+    const [showModal, setShowModal] = useState(false)
+    const [form, setForm] = useState({ username: '', password: '', role: 'calisan' })
+    const [msg, setMsg] = useState(null)
+
+    const load = () => {
+        const token = localStorage.getItem('token')
+        axios.get(`${API}/auth/users`, { headers: { Authorization: `Bearer ${token}` } })
+            .then(r => setUsers(r.data))
+    }
+
+    useEffect(() => { load() }, [])
+
+    const save = async () => {
+        try {
+            const token = localStorage.getItem('token')
+            await axios.post(`${API}/auth/users`, form, { headers: { Authorization: `Bearer ${token}` } })
+            setShowModal(false)
+            setForm({ username: '', password: '', role: 'calisan' })
+            setMsg({ type: 'success', text: 'Kullanıcı oluşturuldu!' })
+            load()
+        } catch (e) {
+            setMsg({ type: 'error', text: e.response?.data?.detail || 'Hata oluştu!' })
+        }
+    }
+
+    const remove = async (id) => {
+        if (confirm('Kullanıcıyı silmek istediğinize emin misiniz?')) {
+            const token = localStorage.getItem('token')
+            await axios.delete(`${API}/auth/users/${id}`, { headers: { Authorization: `Bearer ${token}` } })
+            load()
+        }
+    }
+
+    const roleLabel = (role) => {
+        if (role === 'admin') return <span className="badge badge-info">👑 Admin</span>
+        if (role === 'muhasebeci') return <span className="badge badge-warning">📊 Muhasebeci</span>
+        return <span className="badge badge-gray">👤 Çalışan</span>
+    }
+
+    return (
+        <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #f1f5f9' }}>
+                <div>
+                    <h3 style={{ fontSize: 17, fontWeight: 700, color: '#111827' }}>Kullanıcı Yönetimi</h3>
+                    <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>Sisteme erişebilecek kullanıcıları yönetin.</p>
+                </div>
+                <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Yeni Kullanıcı</button>
+            </div>
+
+            {msg && (
+                <div style={{
+                    padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: 13, fontWeight: 500,
+                    background: msg.type === 'success' ? '#def7ec' : '#fde8e8',
+                    color: msg.type === 'success' ? '#057a55' : '#e02424',
+                    border: `1px solid ${msg.type === 'success' ? '#a7f3d0' : '#fca5a5'}`
+                }}>
+                    {msg.type === 'success' ? '✅' : '❌'} {msg.text}
+                </div>
+            )}
+
+            <div style={{ marginBottom: 16, padding: 14, background: '#eff6ff', borderRadius: 10, border: '1px solid #bfdbfe', fontSize: 13, color: '#1d4ed8', fontWeight: 500 }}>
+                💡 <strong>Admin</strong> her şeyi yapabilir · <strong>Muhasebeci</strong> raporlar ve gelir/gideri görür · <strong>Çalışan</strong> müşteri, borç, stok işlemleri yapabilir
+            </div>
+
+            <div className="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Kullanıcı Adı</th>
+                            <th>Rol</th>
+                            <th>Kayıt Tarihi</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {users.map(u => (
+                            <tr key={u.id}>
+                                <td style={{ fontWeight: 600 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <div style={{
+                                            width: 32, height: 32, borderRadius: '50%',
+                                            background: 'var(--primary)', display: 'flex',
+                                            alignItems: 'center', justifyContent: 'center',
+                                            fontSize: 13, fontWeight: 700, color: 'white'
+                                        }}>
+                                            {u.username?.[0]?.toUpperCase() || '?'}
+                                        </div>
+                                        {u.username}
+                                    </div>
+                                </td>
+                                <td>{roleLabel(u.role)}</td>
+                                <td style={{ fontSize: 13, color: '#6b7280' }}>{new Date(u.created_at).toLocaleDateString('tr-TR')}</td>
+                                <td>
+                                    <button className="btn btn-danger btn-sm" onClick={() => remove(u.id)}>Sil</button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {showModal && (
+                <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-title">Yeni Kullanıcı Ekle</div>
+                        <div className="form-group">
+                            <label>Kullanıcı Adı *</label>
+                            <input value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} placeholder="Kullanıcı adı" />
+                        </div>
+                        <div className="form-group">
+                            <label>Şifre *</label>
+                            <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="En az 6 karakter" />
+                        </div>
+                        <div className="form-group">
+                            <label>Rol *</label>
+                            <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
+                                <option value="calisan">👤 Çalışan</option>
+                                <option value="muhasebeci">📊 Muhasebeci</option>
+                                <option value="admin">👑 Admin</option>
+                            </select>
+                        </div>
+                        <div style={{ padding: 14, background: '#f8fafc', borderRadius: 10, fontSize: 13, color: '#6b7280', marginBottom: 8 }}>
+                            {form.role === 'calisan' && '👤 Çalışan: Müşteri, borç, ödeme ve stok işlemleri yapabilir.'}
+                            {form.role === 'muhasebeci' && '📊 Muhasebeci: Dashboard, raporlar ve gelir/gider sayfalarını görüntüleyebilir.'}
+                            {form.role === 'admin' && '👑 Admin: Tüm sayfalara erişebilir ve kullanıcı yönetimi yapabilir.'}
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn" onClick={() => setShowModal(false)}>İptal</button>
+                            <button className="btn btn-primary" onClick={save} disabled={!form.username || !form.password}>Oluştur</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
 export default function Settings({ user, onLogout }) {
     const [stats, setStats] = useState(null)
     const [activeTab, setActiveTab] = useState('hesap')
@@ -90,6 +229,7 @@ export default function Settings({ user, onLogout }) {
         { id: 'hesap', label: 'Hesap', icon: '👤' },
         { id: 'guvenlik', label: 'Güvenlik', icon: '🔒' },
         { id: 'yedek', label: 'Yedekleme', icon: '💾' },
+        ...(user?.role === 'admin' ? [{ id: 'kullanicilar', label: 'Kullanıcılar', icon: '👥' }] : [])
     ]
 
     const Msg = ({ msg }) => msg ? (
@@ -118,7 +258,6 @@ export default function Settings({ user, onLogout }) {
                 {/* Sol sidebar */}
                 <div style={{ width: 240, flexShrink: 0 }}>
                     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                        {/* Avatar başlık */}
                         <div style={{
                             background: 'linear-gradient(135deg, #1a56db 0%, #3b82f6 100%)',
                             padding: '24px 20px', textAlign: 'center'
@@ -139,11 +278,10 @@ export default function Settings({ user, onLogout }) {
                                 background: 'rgba(255,255,255,0.2)', borderRadius: 999,
                                 padding: '3px 10px', fontSize: 12, color: 'white', fontWeight: 500
                             }}>
-                                {user?.role === 'admin' ? '👑 Admin' : '👤 Çalışan'}
+                                {user?.role === 'admin' ? '👑 Admin' : user?.role === 'muhasebeci' ? '📊 Muhasebeci' : '👤 Çalışan'}
                             </div>
                         </div>
 
-                        {/* Tab linkleri */}
                         <div style={{ padding: '10px 8px' }}>
                             {tabs.map(tab => (
                                 <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
@@ -162,14 +300,12 @@ export default function Settings({ user, onLogout }) {
                             ))}
                         </div>
 
-                        {/* Çıkış */}
                         <div style={{ padding: '0 8px 10px', borderTop: '1px solid #f1f5f9', marginTop: 4, paddingTop: 10 }}>
                             <button onClick={onLogout} style={{
                                 width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                                 padding: '11px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
                                 background: 'transparent', color: '#e02424',
-                                fontSize: 14, fontWeight: 600, textAlign: 'left',
-                                transition: 'all 0.15s'
+                                fontSize: 14, fontWeight: 600, textAlign: 'left', transition: 'all 0.15s'
                             }}
                                 onMouseEnter={e => e.currentTarget.style.background = '#fde8e8'}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -183,14 +319,12 @@ export default function Settings({ user, onLogout }) {
                 {/* Sağ içerik */}
                 <div style={{ flex: 1 }}>
 
-                    {/* Hesap */}
                     {activeTab === 'hesap' && (
                         <div className="card">
                             <div style={{ marginBottom: 24, paddingBottom: 20, borderBottom: '1px solid #f1f5f9' }}>
                                 <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4, color: '#111827' }}>Hesap Bilgileri</h3>
                                 <p style={{ fontSize: 13, color: '#6b7280' }}>Kullanıcı adınızı güncelleyebilirsiniz.</p>
                             </div>
-
                             <div style={{
                                 display: 'flex', alignItems: 'center', gap: 16,
                                 padding: '16px 20px', background: '#f8fafc',
@@ -207,13 +341,11 @@ export default function Settings({ user, onLogout }) {
                                 <div>
                                     <div style={{ fontWeight: 700, fontSize: 16, color: '#111827' }}>{user?.username}</div>
                                     <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
-                                        {user?.role === 'admin' ? '👑 Yönetici hesabı' : '👤 Çalışan hesabı'}
+                                        {user?.role === 'admin' ? '👑 Yönetici hesabı' : user?.role === 'muhasebeci' ? '📊 Muhasebeci hesabı' : '👤 Çalışan hesabı'}
                                     </div>
                                 </div>
                             </div>
-
                             <Msg msg={usernameMsg} />
-
                             <div className="form-group">
                                 <label>Yeni Kullanıcı Adı</label>
                                 <input
@@ -230,30 +362,25 @@ export default function Settings({ user, onLogout }) {
                         </div>
                     )}
 
-                    {/* Güvenlik */}
                     {activeTab === 'guvenlik' && (
                         <div className="card">
                             <div style={{ marginBottom: 24, paddingBottom: 20, borderBottom: '1px solid #f1f5f9' }}>
                                 <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4, color: '#111827' }}>Şifre Değiştir</h3>
                                 <p style={{ fontSize: 13, color: '#6b7280' }}>Hesabınızı güvende tutmak için güçlü bir şifre kullanın.</p>
                             </div>
-
                             <Msg msg={passwordMsg} />
-
                             <div className="form-group">
                                 <label>Mevcut Şifre</label>
                                 <input type="password" value={passwordForm.currentPassword}
                                     onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
                                     placeholder="••••••••" />
                             </div>
-
                             <div className="form-group">
                                 <label>Yeni Şifre</label>
                                 <input type="password" value={passwordForm.newPassword}
                                     onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
                                     placeholder="En az 6 karakter" />
                             </div>
-
                             {passwordForm.newPassword && (
                                 <div style={{ marginTop: -10, marginBottom: 18 }}>
                                     <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
@@ -270,7 +397,6 @@ export default function Settings({ user, onLogout }) {
                                     </span>
                                 </div>
                             )}
-
                             <div className="form-group">
                                 <label>Yeni Şifre Tekrar</label>
                                 <input type="password" value={passwordForm.confirmPassword}
@@ -285,7 +411,6 @@ export default function Settings({ user, onLogout }) {
                                     </div>
                                 )}
                             </div>
-
                             <button className="btn btn-primary" onClick={changePassword}
                                 disabled={!passwordForm.currentPassword || !passwordForm.newPassword || loading}>
                                 🔒 Şifreyi Güncelle
@@ -293,7 +418,6 @@ export default function Settings({ user, onLogout }) {
                         </div>
                     )}
 
-                    {/* Yedekleme */}
                     {activeTab === 'yedek' && (
                         <div>
                             {stats && (
@@ -312,7 +436,6 @@ export default function Settings({ user, onLogout }) {
                                     ))}
                                 </div>
                             )}
-
                             <div className="card">
                                 <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start' }}>
                                     <div style={{
@@ -334,6 +457,10 @@ export default function Settings({ user, onLogout }) {
                                 </div>
                             </div>
                         </div>
+                    )}
+
+                    {activeTab === 'kullanicilar' && user?.role === 'admin' && (
+                        <UserManagement />
                     )}
 
                 </div>
