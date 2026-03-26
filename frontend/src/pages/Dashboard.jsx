@@ -135,7 +135,8 @@ export default function Dashboard() {
             {overdueCustomers.length > 0 && (
                 <div style={{
                     background: '#fff5f5', border: '1px solid #fca5a5', borderRadius: 12,
-                    padding: '14px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between'
+                    padding: '14px 20px', marginBottom: 24,
+                    display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <span style={{ fontSize: 20 }}>⚠️</span>
@@ -152,6 +153,32 @@ export default function Dashboard() {
                         style={{ background: '#fef3c7', color: '#c27803', border: '1px solid #fcd34d', whiteSpace: 'nowrap' }}
                         onClick={sendAllNotifications} disabled={sendingAll}>
                         {sendingAll ? '...' : '📧 Tümüne Bildirim Gönder'}
+                    </button>
+                </div>
+            )}
+
+            {/* Kritik stok uyarısı */}
+            {stockStats?.dusuk_stok > 0 && (
+                <div style={{
+                    background: '#fffbeb', border: '1px solid #fcd34d',
+                    borderRadius: 12, padding: '14px 20px', marginBottom: 24,
+                    display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 20 }}>📦</span>
+                        <div>
+                            <div style={{ fontWeight: 600, color: '#c27803' }}>
+                                {stockStats.dusuk_stok} ürün kritik stok seviyesinde!
+                            </div>
+                            <div style={{ fontSize: 13, color: '#c27803', marginTop: 2 }}>
+                                Stok sayfasından kontrol edin.
+                            </div>
+                        </div>
+                    </div>
+                    <button className="btn btn-sm"
+                        style={{ background: '#fef3c7', color: '#c27803', border: '1px solid #fcd34d' }}
+                        onClick={() => navigate('/stock')}>
+                        📦 Stoka Git
                     </button>
                 </div>
             )}

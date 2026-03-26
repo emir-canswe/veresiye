@@ -176,3 +176,100 @@ async def send_single_notification(
     background_tasks.add_task(send_overdue_email, email, customer.name, balance, days)
 
     return {"message": f"{customer.name} adlı müşteriye bildirim gönderildi"}
+
+
+@router.get("/low-stock")
+def get_low_stock_alerts(db: Session = Depends(get_db)):
+    from models.models import Product
+    products = db.query(Product).filter(
+        Product.is_active == True,
+        Product.stock_quantity <= Product.min_stock
+    ).all()
+    return [
+        {
+            "id": p.id,
+            "name": p.name,
+            "stock_quantity": p.stock_quantity,
+            "min_stock": p.min_stock,
+            "unit": p.unit,
+            "category_name": p.category.name if p.category else None
+        }
+        for p in products
+    ]
+
+@router.post("/send-low-stock")
+async def send_low_stock_notification(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    from models.models import Product
+    products = db.query(Product).filter(
+        Product.is_active == True,
+        Product.stock_quantity <= Product.min_stock
+    ).all()
+
+    if not products:
+        return {"message": "Kritik stokta ürün yok"}
+
+    conf = get_mail_config()
+    if not conf.MAIL_USERNAME:
+        return {"message": "E-posta ayarları yapılmamış", "low_stock_count": len(products)}
+
+    rows = "".join([
+        f"""
+        <tr>
+            <td style="padding:10px;border-bottom:1px solid #f1f5f9;font-weight:600">{p.name}</td>
+            <td style="padding:10px;border-bottom:1px solid #f1f5f9;color:#e02424;font-weight:700">{p.stock_quantity} {p.unit}</td>
+            <td style="padding:10px;border-bottom:1px solid #f1f5f9;color:#6b7280">{p.min_stock} {p.unit}</td>
+            <td style="padding:10px;border-bottom:1px solid #f1f5f9">{p.category.name if p.category else '-'}</td>
+        </tr>
+        """
+        for p in products
+    ])
+
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+        <div style="background:linear-gradient(135deg,#f59e0b,#d97706);padding:30px;border-radius:12px 12px 0 0">
+            <h1 style="color:white;margin:0;font-size:22px">⚠️ TahsilatPro</h1>
+            <p style="color:rgba(255,255,255,0.85);margin:8px 0 0">Kritik Stok Uyarısı</p>
+        </div>
+        <div style="background:white;padding:30px;border:1px solid #e8f0fe;border-radius:0 0 12px 12px">
+            <p style="font-size:15px;color:#374151">
+                <strong>{len(products)} ürün</strong> kritik stok seviyesinde!
+                Lütfen stok girişi yapınız.
+            </p>
+            <table style="width:100%;border-collapse:collapse;margin-top:16px">
+                <thead>
+                    <tr style="background:#f8fafc">
+                        <th style="padding:10px;text-align:left;font-size:12px;color:#94a3b8">ÜRÜN</th>
+                        <th style="padding:10px;text-align:left;font-size:12px;color:#94a3b8">MEVCUT STOK</th>
+                        <th style="padding:10px;text-align:left;font-size:12px;color:#94a3b8">MİNİMUM</th>
+                        <th style="padding:10px;text-align:left;font-size:12px;color:#94a3b8">KATEGORİ</th>
+                    </tr>
+                </thead>
+                <tbody>{rows}</tbody>
+            </table>
+            <div style="margin-top:24px;padding:16px;background:#fef3c7;border-radius:10px;border:1px solid #fcd34d">
+                <p style="margin:0;font-size:13px;color:#c27803">
+                    ⚠️ Bu bildirim TahsilatPro sistemi tarafından otomatik gönderilmiştir.
+                </p>
+            </div>
+        </div>
+    </div>
+    """
+
+    async def send():
+        message = MessageSchema(
+            subject=f"⚠️ Kritik Stok Uyarısı — {len(products)} ürün",
+            recipients=[conf.MAIL_USERNAME],
+            body=html,
+            subtype=MessageType.html
+        )
+        fm = FastMail(conf)
+        await fm.send_message(message)
+
+    background_tasks.add_task(send)
+    return {
+        "message": f"{len(products)} ürün için stok uyarısı gönderildi",
+        "low_stock_count": len(products)
+    }

@@ -160,17 +160,33 @@ export default function Stock() {
                 <div style={{
                     background: '#fff5f5', border: '1px solid #fca5a5',
                     borderRadius: 12, padding: '14px 20px', marginBottom: 20,
-                    display: 'flex', alignItems: 'center', gap: 10
+                    display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between'
                 }}>
-                    <span style={{ fontSize: 20 }}>⚠️</span>
-                    <div>
-                        <div style={{ fontWeight: 600, color: 'var(--danger)' }}>
-                            {stats.dusuk_stok} ürünün stoğu kritik seviyede!
-                        </div>
-                        <div style={{ fontSize: 13, color: '#9b1c1c' }}>
-                            Stok girişi yapmanız önerilir.
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 24 }}>⚠️</span>
+                        <div>
+                            <div style={{ fontWeight: 600, color: 'var(--danger)', fontSize: 15 }}>
+                                {stats.dusuk_stok} ürünün stoğu kritik seviyede!
+                            </div>
+                            <div style={{ fontSize: 13, color: '#9b1c1c', marginTop: 2 }}>
+                                Stok girişi yapmanız önerilir.
+                            </div>
                         </div>
                     </div>
+                    <button
+                        className="btn btn-sm"
+                        style={{ background: '#fef3c7', color: '#c27803', border: '1px solid #fcd34d', whiteSpace: 'nowrap' }}
+                        onClick={async () => {
+                            try {
+                                const res = await axios.post(`${API}/notifications/send-low-stock`)
+                                alert(res.data.message)
+                            } catch {
+                                alert('Bildirim gönderilemedi!')
+                            }
+                        }}
+                    >
+                        📧 Stok Uyarısı Gönder
+                    </button>
                 </div>
             )}
 
