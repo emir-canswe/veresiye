@@ -68,6 +68,7 @@ class PaymentOut(PaymentBase):
 
 class BankTransactionOut(BaseModel):
     id: int
+    transaction_hash: str
     date: datetime
     sender_name: Optional[str] = None
     sender_iban: Optional[str] = None
@@ -75,6 +76,8 @@ class BankTransactionOut(BaseModel):
     description: Optional[str] = None
     is_matched: bool
     matched_customer_id: Optional[int] = None
+    payment_id: Optional[int] = None
+
     class Config:
         from_attributes = True
 
