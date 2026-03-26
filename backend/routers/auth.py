@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from database import get_db
@@ -69,6 +69,16 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     except JWTError:
         raise HTTPException(status_code=401, detail="Geçersiz token")
 
+def require_admin(current_user: User = Depends(get_current_user)):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Bu işlem için admin yetkisi gerekli!")
+    return current_user
+
+def require_admin_or_muhasebeci(current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["admin", "muhasebeci"]:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok!")
+    return current_user
+
 @router.post("/login", response_model=Token)
 def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form.username).first()
@@ -116,7 +126,31 @@ def update_password(data: UpdatePassword, current_user: User = Depends(get_curre
     return {"message": "Şifre güncellendi"}
 
 @router.get("/users", response_model=list[UserOut])
-def get_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Yetkisiz")
+def get_users(db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     return db.query(User).all()
+
+@router.post("/users", response_model=UserOut)
+def create_user(data: UserCreate, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    existing = db.query(User).filter(User.username == data.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu kullanıcı adı zaten alınmış!")
+    user = User(
+        username=data.username,
+        password_hash=hash_password(data.password),
+        role=data.role
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+@router.delete("/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Kendinizi silemezsiniz!")
+    db.delete(user)
+    db.commit()
+    return {"message": "Kullanıcı silindi"}

@@ -46,7 +46,7 @@ def create_customer(data: CustomerCreate, db: Session = Depends(get_db)):
     db.add(customer)
     db.flush()
     for iban in data.ibans:
-        db.add(CustomerIBAN(customer_id=customer.id, iban=iban.iban, label=iban.label))
+        db.add(CustomerIBAN(customer_id=customer.id, iban=iban.iban.strip(), label=iban.label))
     db.commit()
     db.refresh(customer)
     return customer
@@ -75,6 +75,18 @@ def update_customer(customer_id: int, data: CustomerCreate, db: Session = Depend
     customer.address = data.address
     customer.notes = data.notes
     customer.son_odeme_tarihi = data.son_odeme_tarihi
+
+    # IBAN güncelleme — mevcut IBAN'ları sil, yenilerini ekle
+    if data.ibans is not None:
+        db.query(CustomerIBAN).filter(CustomerIBAN.customer_id == customer_id).delete()
+        for iban in data.ibans:
+            if iban.iban and iban.iban.strip():
+                db.add(CustomerIBAN(
+                    customer_id=customer_id,
+                    iban=iban.iban.strip(),
+                    label=iban.label
+                ))
+
     db.commit()
     db.refresh(customer)
     return customer

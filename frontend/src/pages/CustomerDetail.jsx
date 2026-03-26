@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import API from '../api'
+
 const fmt = (n) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(n)
 
 export default function CustomerDetail() {
@@ -12,8 +13,11 @@ export default function CustomerDetail() {
     const [payments, setPayments] = useState([])
     const [showDebtModal, setShowDebtModal] = useState(false)
     const [showPaymentModal, setShowPaymentModal] = useState(false)
+    const [showIbanModal, setShowIbanModal] = useState(false)
     const [debtForm, setDebtForm] = useState({ amount: '', description: '', category: '' })
     const [paymentForm, setPaymentForm] = useState({ amount: '', method: 'nakit', description: '' })
+    const [ibanForm, setIbanForm] = useState({ iban: '', label: '' })
+    const [sending, setSending] = useState(false)
 
     const load = () => {
         axios.get(`${API}/customers/${id}`).then(r => setCustomer(r.data))
@@ -56,23 +60,107 @@ export default function CustomerDetail() {
         load()
     }
 
-    if (!customer) return <div style={{ padding: 40 }}>Yükleniyor...</div>
+    const saveIban = async () => {
+        try {
+            await axios.put(`${API}/customers/${id}`, {
+                name: customer.name,
+                phone: customer.phone,
+                address: customer.address,
+                notes: customer.notes,
+                son_odeme_tarihi: customer.son_odeme_tarihi,
+                ibans: [
+                    ...customer.ibans,
+                    { iban: ibanForm.iban, label: ibanForm.label || 'IBAN' }
+                ]
+            })
+            setShowIbanModal(false)
+            setIbanForm({ iban: '', label: '' })
+            load()
+        } catch (e) {
+            alert(e.response?.data?.detail || 'Hata oluştu!')
+        }
+    }
+
+    const deleteIban = async (ibanId) => {
+        if (confirm('Bu IBAN\'ı silmek istediğinize emin misiniz?')) {
+            const newIbans = customer.ibans.filter(i => i.id !== ibanId)
+            await axios.put(`${API}/customers/${id}`, {
+                name: customer.name,
+                phone: customer.phone,
+                address: customer.address,
+                notes: customer.notes,
+                son_odeme_tarihi: customer.son_odeme_tarihi,
+                ibans: newIbans
+            })
+            load()
+        }
+    }
+
+    const sendNotification = async () => {
+        setSending(true)
+        try {
+            await axios.post(`${API}/notifications/send-single/${id}`)
+            alert('✅ Bildirim e-postası gönderildi!')
+        } catch (e) {
+            alert(e.response?.data?.detail || 'Hata oluştu!')
+        }
+        setSending(false)
+    }
+
+    const getCustomerEmail = () => {
+        if (!customer?.notes) return null
+        for (const line of customer.notes.split('\n')) {
+            if (line.startsWith('email:')) return line.replace('email:', '').trim()
+        }
+        return null
+    }
+
+    const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+
+    if (!customer) return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200 }}>
+            <div style={{ color: '#6b7280' }}>Yükleniyor...</div>
+        </div>
+    )
+
+    const email = getCustomerEmail()
 
     return (
         <div>
             {/* Üst bar */}
             <div className="page-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <button className="btn btn-outline btn-sm" onClick={() => navigate('/customers')}>← Geri</button>
+                    <button
+                        onClick={() => navigate('/customers')}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            background: 'white', border: '1.5px solid #e2e8f0',
+                            borderRadius: 10, padding: '8px 16px', cursor: 'pointer',
+                            fontSize: 14, fontWeight: 600, color: '#374151',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.06)', transition: 'all 0.18s'
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#1a56db'; e.currentTarget.style.color = '#1a56db' }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#374151' }}
+                    >
+                        ← Müşteriler
+                    </button>
                     <div>
                         <h1 className="page-title">{customer.name}</h1>
                         <p className="page-subtitle">
                             {customer.phone && `📞 ${customer.phone}`}
-                            {customer.ibans?.[0]?.iban && ` · 🏦 ${customer.ibans[0].iban}`}
+                            {customer.phone && email && ' · '}
+                            {email && `📧 ${email}`}
                         </p>
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
+                    {remaining > 0 && (
+                        <button className="btn btn-sm"
+                            style={{ background: '#fef3c7', color: '#c27803', border: '1px solid #fcd34d' }}
+                            onClick={sendNotification} disabled={sending}>
+                            {sending ? '...' : '📧 Bildirim'}
+                        </button>
+                    )}
                     <button className="btn btn-outline" onClick={() => setShowDebtModal(true)}>+ Borç Ekle</button>
                     <button className="btn btn-primary" onClick={() => setShowPaymentModal(true)}>+ Ödeme Al</button>
                 </div>
@@ -90,12 +178,118 @@ export default function CustomerDetail() {
                     <div className="stat-label">Toplam Ödeme</div>
                     <div className="stat-value success">{fmt(totalPayment)}</div>
                 </div>
-                <div className="stat-card" style={{ border: remaining > 0 ? '2px solid #fca5a5' : '2px solid #6ee7b7' }}>
+                <div className="stat-card" style={{
+                    border: remaining > 0 ? '2px solid #fca5a5' : '2px solid #6ee7b7'
+                }}>
                     <div className={`stat-icon ${remaining > 0 ? 'yellow' : 'green'}`}>
                         {remaining > 0 ? '⏳' : '✅'}
                     </div>
                     <div className="stat-label">Kalan Borç</div>
                     <div className={`stat-value ${remaining > 0 ? 'danger' : 'success'}`}>{fmt(remaining)}</div>
+                </div>
+            </div>
+
+            {/* Müşteri bilgileri + IBAN */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
+
+                {/* Müşteri bilgileri */}
+                <div className="card">
+                    <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, color: '#111827' }}>👤 Müşteri Bilgileri</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {customer.phone && (
+                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                <span style={{ fontSize: 16 }}>📞</span>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Telefon</div>
+                                    <div style={{ fontSize: 14, fontWeight: 500 }}>{customer.phone}</div>
+                                </div>
+                            </div>
+                        )}
+                        {email && (
+                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                <span style={{ fontSize: 16 }}>📧</span>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>E-posta</div>
+                                    <div style={{ fontSize: 14, fontWeight: 500 }}>{email}</div>
+                                </div>
+                            </div>
+                        )}
+                        {customer.address && (
+                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                <span style={{ fontSize: 16 }}>📍</span>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Adres</div>
+                                    <div style={{ fontSize: 14, fontWeight: 500 }}>{customer.address}</div>
+                                </div>
+                            </div>
+                        )}
+                        {customer.son_odeme_tarihi && (
+                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                <span style={{ fontSize: 16 }}>📅</span>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Son Ödeme</div>
+                                    <div style={{ fontSize: 14, fontWeight: 500 }}>{new Date(customer.son_odeme_tarihi).toLocaleDateString('tr-TR')}</div>
+                                </div>
+                            </div>
+                        )}
+                        {customer.notes && (
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <span style={{ fontSize: 16 }}>📝</span>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Notlar</div>
+                                    <div style={{ fontSize: 14 }}>
+                                        {customer.notes.split('\n').filter(l => !l.startsWith('email:')).join('\n')}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* IBAN listesi */}
+                <div className="card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <h3 style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>🏦 IBAN Bilgileri</h3>
+                        <button className="btn btn-primary btn-sm" onClick={() => setShowIbanModal(true)}>
+                            + IBAN Ekle
+                        </button>
+                    </div>
+                    {customer.ibans?.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '24px', color: '#9ca3af', fontSize: 14 }}>
+                            Henüz IBAN eklenmemiş
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {customer.ibans.map((iban, i) => (
+                                <div key={iban.id} style={{
+                                    display: 'flex', alignItems: 'center', gap: 12,
+                                    padding: '12px 14px', background: '#f8fafc',
+                                    borderRadius: 10, border: '1px solid #e8f0fe'
+                                }}>
+                                    <div style={{
+                                        width: 32, height: 32, borderRadius: 8,
+                                        background: '#dbeafe', display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 16, flexShrink: 0
+                                    }}>🏦</div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 2 }}>
+                                            {iban.label || `IBAN ${i + 1}`}
+                                        </div>
+                                        <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', fontFamily: 'monospace' }}>
+                                            {iban.iban}
+                                        </div>
+                                    </div>
+                                    <button onClick={() => deleteIban(iban.id)}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', fontSize: 16 }}
+                                        onMouseEnter={e => e.currentTarget.style.color = '#e02424'}
+                                        onMouseLeave={e => e.currentTarget.style.color = '#fca5a5'}>
+                                        🗑️
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -124,7 +318,7 @@ export default function CustomerDetail() {
                                     const rows = [...allTransactions].reverse().map((tx, i) => {
                                         if (tx.type === 'debt') balance += tx.amount
                                         else balance -= tx.amount
-                                        return { ...tx, balance, idx: i }
+                                        return { ...tx, balance }
                                     }).reverse()
                                     return rows.map(tx => (
                                         <tr key={`${tx.type}-${tx.id}`}>
@@ -136,8 +330,7 @@ export default function CustomerDetail() {
                                                     ? <span className="badge badge-danger">Borç</span>
                                                     : <span className="badge badge-success">
                                                         {tx.method === 'banka' ? '🏦 Banka' : '💵 Nakit'}
-                                                    </span>
-                                                }
+                                                    </span>}
                                             </td>
                                             <td>{tx.description || '-'}</td>
                                             <td>{tx.category ? <span className="badge badge-info">{tx.category}</span> : '-'}</td>
@@ -158,6 +351,36 @@ export default function CustomerDetail() {
                     </div>
                 )}
             </div>
+
+            {/* IBAN Ekle Modal */}
+            {showIbanModal && (
+                <div className="modal-overlay" onClick={() => setShowIbanModal(false)}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal-title">IBAN Ekle — {customer.name}</div>
+                        <div className="form-group">
+                            <label>IBAN *</label>
+                            <input
+                                value={ibanForm.iban}
+                                onChange={e => setIbanForm({ ...ibanForm, iban: e.target.value })}
+                                placeholder="TR00 0000 0000 0000 0000 00"
+                                style={{ fontFamily: 'monospace' }}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Etiket</label>
+                            <input
+                                value={ibanForm.label}
+                                onChange={e => setIbanForm({ ...ibanForm, label: e.target.value })}
+                                placeholder="Ziraat Bankası, Garanti..."
+                            />
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn" onClick={() => setShowIbanModal(false)}>İptal</button>
+                            <button className="btn btn-primary" onClick={saveIban} disabled={!ibanForm.iban}>Kaydet</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Borç Modal */}
             {showDebtModal && (
