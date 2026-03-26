@@ -56,9 +56,7 @@ export default function Customers() {
         return null
     }
 
-    const getInitials = (name) => {
-        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    }
+    const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 
     const filtered = customers.filter(c =>
         c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -166,16 +164,11 @@ export default function Customers() {
             </div>
 
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                {/* Arama */}
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9' }}>
                     <div style={{ position: 'relative' }}>
                         <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 16 }}>🔍</span>
                         <input
-                            style={{
-                                width: '100%', padding: '10px 14px 10px 40px',
-                                border: '1.5px solid #e2e8f0', borderRadius: 10,
-                                fontSize: 14, outline: 'none', transition: 'border 0.18s'
-                            }}
+                            style={{ width: '100%', padding: '10px 14px 10px 40px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', transition: 'border 0.18s' }}
                             placeholder="İsim, telefon veya IBAN ile ara..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
@@ -192,10 +185,9 @@ export default function Customers() {
                     </div>
                 ) : (
                     <div>
-                        {/* Tablo başlığı */}
                         <div style={{
                             display: 'grid',
-                            gridTemplateColumns: '2.5fr 1.2fr 1.8fr 1.2fr 1.2fr 1.5fr',
+                            gridTemplateColumns: '2.5fr 1.2fr 1.8fr 1.2fr 1.4fr 1.5fr',
                             padding: '10px 20px',
                             background: '#f8fafc',
                             borderBottom: '1px solid #f1f5f9',
@@ -206,11 +198,10 @@ export default function Customers() {
                             <div>Telefon</div>
                             <div>E-posta</div>
                             <div>Son Ödeme</div>
-                            <div style={{ textAlign: 'right' }}>Kalan Borç</div>
+                            <div style={{ textAlign: 'right', paddingRight: 24 }}>Kalan Borç</div>
                             <div style={{ textAlign: 'center' }}>İşlemler</div>
                         </div>
 
-                        {/* Satırlar */}
                         {filtered.map((c, idx) => {
                             const balance = getBalance(c.id)
                             const overdue = isOverdue(c)
@@ -220,7 +211,7 @@ export default function Customers() {
                                 <div key={c.id}
                                     style={{
                                         display: 'grid',
-                                        gridTemplateColumns: '2.5fr 1.2fr 1.8fr 1.2fr 1.2fr 1.5fr',
+                                        gridTemplateColumns: '2.5fr 1.2fr 1.8fr 1.2fr 1.4fr 1.5fr',
                                         padding: '14px 20px',
                                         borderBottom: idx < filtered.length - 1 ? '1px solid #f8fafc' : 'none',
                                         background: overdue ? '#fff8f8' : 'white',
@@ -279,12 +270,12 @@ export default function Customers() {
                                     </div>
 
                                     {/* Kalan Borç */}
-                                    <div style={{ textAlign: 'right' }}>
+                                    <div style={{ textAlign: 'right', paddingRight: 24 }}>
                                         <span style={{
-                                            fontWeight: 700, fontSize: 15,
-                                            color: balance > 0 ? 'var(--danger)' : balance < 0 ? 'var(--success)' : '#d1d5db'
+                                            fontWeight: 700, fontSize: 14,
+                                            color: balance > 0 ? 'var(--danger)' : balance === 0 ? '#9ca3af' : '#057a55'
                                         }}>
-                                            {fmt(balance)}
+                                            {balance < 0 ? '✅ Kapalı' : balance === 0 ? '₺0,00' : fmt(balance)}
                                         </span>
                                     </div>
 

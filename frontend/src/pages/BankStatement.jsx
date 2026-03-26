@@ -57,9 +57,15 @@ export default function BankStatement() {
         setConverting(txId)
         try {
             await axios.post(`${API}/bank/transactions/${txId}/convert`)
+            alert('✅ Ödeme kaydı oluşturuldu!')
             load()
         } catch (e) {
-            alert(e.response?.data?.detail || 'Hata oluştu')
+            if (e.response?.data?.detail === 'Bu işlem zaten ödemeye dönüştürüldü') {
+                alert('⚠️ Bu işlem zaten ödemeye dönüştürüldü!')
+                load()
+            } else {
+                alert(e.response?.data?.detail || 'Hata oluştu')
+            }
         }
         setConverting(null)
     }
@@ -87,9 +93,7 @@ export default function BankStatement() {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">Akıllı Ödeme</h1>
-                    <p className="page-subtitle">
-                        Banka ekstrelerinizi yükleyin, sistem otomatik eşleştirsin
-                    </p>
+                    <p className="page-subtitle">Banka ekstrelerinizi yükleyin, sistem otomatik eşleştirsin</p>
                 </div>
                 <label style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -179,7 +183,6 @@ export default function BankStatement() {
                                         borderBottom: '1px solid #f1f5f9'
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-                                            {/* Sol - işlem bilgisi */}
                                             <div style={{
                                                 width: 44, height: 44, borderRadius: 12,
                                                 background: '#fef3c7', display: 'flex',
@@ -211,7 +214,6 @@ export default function BankStatement() {
                                                 </div>
                                             </div>
 
-                                            {/* Sağ - eşleştirme */}
                                             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
                                                 <select
                                                     style={{
@@ -241,7 +243,6 @@ export default function BankStatement() {
                                             </div>
                                         </div>
 
-                                        {/* Öneri sonuçları */}
                                         {suggestions[tx.id] && (
                                             <div style={{
                                                 marginTop: 16, padding: '14px 16px',
@@ -316,6 +317,37 @@ export default function BankStatement() {
             {/* Eşleşenler */}
             {activeTab === 'matched' && (
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    {matched.length > 0 && matched.some(t => !t.payment_id) && (
+                        <div style={{
+                            padding: '14px 24px', borderBottom: '1px solid #f1f5f9',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            background: '#f8fafc'
+                        }}>
+                            <div style={{ fontSize: 14, color: '#374151', fontWeight: 500 }}>
+                                💡 <strong>{matched.filter(t => !t.payment_id).length} işlem</strong> henüz ödemeye dönüştürülmedi
+                            </div>
+                            <button
+                                onClick={async () => {
+                                    const pending = matched.filter(t => !t.payment_id)
+                                    for (const tx of pending) {
+                                        try {
+                                            await axios.post(`${API}/bank/transactions/${tx.id}/convert`)
+                                        } catch { }
+                                    }
+                                    alert(`✅ ${pending.length} işlem ödemeye dönüştürüldü!`)
+                                    load()
+                                }}
+                                style={{
+                                    padding: '9px 20px', borderRadius: 9, border: 'none',
+                                    cursor: 'pointer', fontWeight: 700, fontSize: 13,
+                                    background: 'linear-gradient(135deg, #1a56db, #3b82f6)',
+                                    color: 'white', boxShadow: '0 2px 8px rgba(26,86,219,0.25)'
+                                }}
+                            >
+                                💰 Tümünü Ödemeye Dönüştür
+                            </button>
+                        </div>
+                    )}
                     {matched.length === 0 ? (
                         <div className="empty-state" style={{ padding: 60 }}>
                             <div className="icon">🏦</div>
@@ -332,10 +364,12 @@ export default function BankStatement() {
                                 }}>
                                     <div style={{
                                         width: 44, height: 44, borderRadius: 12,
-                                        background: '#def7ec', display: 'flex',
-                                        alignItems: 'center', justifyContent: 'center',
+                                        background: tx.payment_id ? '#def7ec' : '#fef3c7',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         fontSize: 20, flexShrink: 0
-                                    }}>✅</div>
+                                    }}>
+                                        {tx.payment_id ? '✅' : '🏦'}
+                                    </div>
 
                                     <div style={{ flex: 1 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
@@ -348,6 +382,14 @@ export default function BankStatement() {
                                             <span style={{ fontSize: 12, color: '#9ca3af' }}>
                                                 {new Date(tx.date).toLocaleDateString('tr-TR')}
                                             </span>
+                                            {tx.payment_id && (
+                                                <span style={{
+                                                    background: '#def7ec', color: '#057a55',
+                                                    fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 6
+                                                }}>
+                                                    Ödeme Yapıldı
+                                                </span>
+                                            )}
                                         </div>
                                         <div style={{ display: 'flex', gap: 12 }}>
                                             {tx.sender_iban && (
@@ -363,20 +405,30 @@ export default function BankStatement() {
                                         </div>
                                     </div>
 
-                                    <button
-                                        disabled={converting === tx.id}
-                                        onClick={() => convertToPayment(tx.id)}
-                                        style={{
-                                            padding: '9px 18px', borderRadius: 9, border: 'none',
-                                            cursor: converting === tx.id ? 'not-allowed' : 'pointer',
-                                            fontWeight: 600, fontSize: 13,
-                                            background: converting === tx.id ? '#f3f4f6' : '#def7ec',
-                                            color: converting === tx.id ? '#9ca3af' : 'var(--success)',
-                                            transition: 'all 0.15s', whiteSpace: 'nowrap'
-                                        }}
-                                    >
-                                        {converting === tx.id ? '...' : '💰 Ödemeye Dönüştür'}
-                                    </button>
+                                    {tx.payment_id ? (
+                                        <span style={{
+                                            padding: '9px 18px', borderRadius: 9,
+                                            background: '#def7ec', color: 'var(--success)',
+                                            fontSize: 13, fontWeight: 600
+                                        }}>
+                                            ✅ Ödeme Yapıldı
+                                        </span>
+                                    ) : (
+                                        <button
+                                            disabled={converting === tx.id}
+                                            onClick={() => convertToPayment(tx.id)}
+                                            style={{
+                                                padding: '9px 18px', borderRadius: 9, border: 'none',
+                                                cursor: converting === tx.id ? 'not-allowed' : 'pointer',
+                                                fontWeight: 600, fontSize: 13,
+                                                background: converting === tx.id ? '#f3f4f6' : '#def7ec',
+                                                color: converting === tx.id ? '#9ca3af' : 'var(--success)',
+                                                transition: 'all 0.15s', whiteSpace: 'nowrap'
+                                            }}
+                                        >
+                                            {converting === tx.id ? '...' : '💰 Ödemeye Dönüştür'}
+                                        </button>
+                                    )}
                                 </div>
                             ))}
                         </div>

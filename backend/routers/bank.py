@@ -104,10 +104,26 @@ async def upload_statement(file: UploadFile = File(...), db: Session = Depends(g
         db.refresh(tx)
     return saved
 
-@router.get("/transactions", response_model=list[BankTransactionOut])
+@router.get("/transactions")
 def get_transactions(db: Session = Depends(get_db)):
-    return db.query(BankTransaction).order_by(BankTransaction.date.desc()).all()
-
+    from models.models import Payment
+    transactions = db.query(BankTransaction).order_by(BankTransaction.date.desc()).all()
+    result = []
+    for tx in transactions:
+        payment = db.query(Payment).filter(Payment.bank_transaction_id == tx.id).first()
+        result.append({
+            "id": tx.id,
+            "transaction_hash": tx.transaction_hash,
+            "date": tx.date,
+            "sender_name": tx.sender_name,
+            "sender_iban": tx.sender_iban,
+            "amount": tx.amount,
+            "description": tx.description,
+            "is_matched": tx.is_matched,
+            "matched_customer_id": tx.matched_customer_id,
+            "payment_id": payment.id if payment else None
+        })
+    return result
 @router.get("/unmatched", response_model=list[BankTransactionOut])
 def get_unmatched(db: Session = Depends(get_db)):
     return db.query(BankTransaction).filter(BankTransaction.is_matched == False).all()
