@@ -11,6 +11,7 @@ export default function BankStatement() {
     const [converting, setConverting] = useState(null)
     const [suggestions, setSuggestions] = useState({})
     const [loadingSuggestion, setLoadingSuggestion] = useState(null)
+    const [activeTab, setActiveTab] = useState('unmatched')
 
     const load = () => {
         axios.get(`${API}/bank/transactions`).then(r => setTransactions(r.data))
@@ -82,185 +83,325 @@ export default function BankStatement() {
 
     return (
         <div>
+            {/* Header */}
             <div className="page-header">
                 <div>
                     <h1 className="page-title">Akıllı Ödeme</h1>
                     <p className="page-subtitle">
-                        {transactions.length} işlem · {matched.length} eşleşti · {unmatched.length} bekliyor
+                        Banka ekstrelerinizi yükleyin, sistem otomatik eşleştirsin
                     </p>
                 </div>
-                <label className="btn btn-primary" style={{ cursor: 'pointer' }}>
-                    {uploading ? 'Yükleniyor...' : '📂 Ekstre Yükle'}
+                <label style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    background: 'linear-gradient(135deg, #1a56db, #3b82f6)',
+                    color: 'white', padding: '10px 22px', borderRadius: 10,
+                    cursor: 'pointer', fontWeight: 600, fontSize: 14,
+                    boxShadow: '0 4px 12px rgba(26,86,219,0.3)', transition: 'all 0.18s'
+                }}>
+                    {uploading ? '⏳ Yükleniyor...' : '📂 Ekstre Yükle'}
                     <input type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={upload} style={{ display: 'none' }} />
                 </label>
             </div>
 
-            <div className="info-box">
-                💡 Sistem <strong>7 farklı algoritma</strong> ile eşleştirme yapar: IBAN, isim benzerliği, telefon, açıklama analizi, tutar eşleşmesi ve geçmiş öğrenimi. <strong>%85+</strong> güven skorunda otomatik eşleştirir.
+            {/* İstatistik kartlar */}
+            <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)', marginBottom: 24 }}>
+                <div className="stat-card">
+                    <div className="stat-icon blue">🏦</div>
+                    <div className="stat-label">Toplam İşlem</div>
+                    <div className="stat-value primary">{transactions.length}</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-icon green">✅</div>
+                    <div className="stat-label">Eşleştirildi</div>
+                    <div className="stat-value success">{matched.length}</div>
+                </div>
+                <div className="stat-card" style={{ border: unmatched.length > 0 ? '2px solid #fca5a5' : '1px solid #e8f0fe' }}>
+                    <div className="stat-icon yellow">⏳</div>
+                    <div className="stat-label">Bekliyor</div>
+                    <div className={`stat-value ${unmatched.length > 0 ? 'danger' : 'primary'}`}>{unmatched.length}</div>
+                </div>
             </div>
-            {unmatched.length > 0 && (
-                <div className="card" style={{ borderLeft: '4px solid var(--warning)' }}>
-                    <h3 style={{ marginBottom: 16, fontSize: 15, fontWeight: 600, color: 'var(--warning)' }}>
-                        ⏳ Eşleştirilmesi Gerekenler ({unmatched.length})
-                    </h3>
-                    <div className="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Tarih</th>
-                                    <th>Gönderen</th>
-                                    <th>IBAN</th>
-                                    <th>Tutar</th>
-                                    <th>Açıklama</th>
-                                    <th>Eşleştir</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {unmatched.map(tx => (
-                                    <>
-                                        <tr key={tx.id}>
-                                            <td style={{ fontSize: 13, color: '#6b7280' }}>{new Date(tx.date).toLocaleDateString('tr-TR')}</td>
-                                            <td style={{ fontWeight: 500 }}>{tx.sender_name || '-'}</td>
-                                            <td style={{ fontSize: 12, color: '#6b7280' }}>{tx.sender_iban || '-'}</td>
-                                            <td><span style={{ color: 'var(--success)', fontWeight: 600 }}>{fmt(tx.amount)}</span></td>
-                                            <td style={{ fontSize: 13 }}>{tx.description || '-'}</td>
-                                            <td>
-                                                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                                    <select
-                                                        style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }}
-                                                        defaultValue=""
-                                                        onChange={e => e.target.value && match(tx.id, e.target.value)}
-                                                    >
-                                                        <option value="">Manuel seç...</option>
-                                                        {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                                    </select>
-                                                    <button
-                                                        className="btn btn-outline btn-sm"
-                                                        onClick={() => getSuggestions(tx.id)}
-                                                        disabled={loadingSuggestion === tx.id}
-                                                        style={{ whiteSpace: 'nowrap' }}
-                                                    >
-                                                        {loadingSuggestion === tx.id ? '...' : '🤖 Öneri'}
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
 
-                                        {/* Öneri satırı */}
+            {/* Algoritma bilgi kutusu */}
+            <div style={{
+                background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
+                border: '1px solid #bfdbfe', borderRadius: 14,
+                padding: '16px 20px', marginBottom: 24,
+                display: 'flex', alignItems: 'center', gap: 14
+            }}>
+                <div style={{
+                    width: 44, height: 44, borderRadius: 12,
+                    background: '#1a56db', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    fontSize: 20, flexShrink: 0
+                }}>🤖</div>
+                <div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: '#1e3a8a', marginBottom: 4 }}>
+                        7 Katmanlı Akıllı Eşleştirme Sistemi
+                    </div>
+                    <div style={{ fontSize: 13, color: '#1d4ed8', lineHeight: 1.6 }}>
+                        <strong>IBAN</strong> · <strong>İsim benzerliği</strong> · <strong>Telefon</strong> · <strong>Açıklama analizi</strong> · <strong>Tutar eşleşmesi</strong> · <strong>Geçmiş öğrenimi</strong> — %85+ güvende otomatik eşleştirir
+                    </div>
+                </div>
+            </div>
+
+            {/* Tab */}
+            <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'white', padding: 5, borderRadius: 12, border: '1px solid var(--border)', width: 'fit-content' }}>
+                {[
+                    { id: 'unmatched', label: `⏳ Bekleyenler (${unmatched.length})` },
+                    { id: 'matched', label: `✅ Eşleşenler (${matched.length})` }
+                ].map(t => (
+                    <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
+                        padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                        background: activeTab === t.id ? 'var(--primary)' : 'transparent',
+                        color: activeTab === t.id ? 'white' : '#6b7280',
+                        fontWeight: activeTab === t.id ? 700 : 500, fontSize: 14, transition: 'all 0.15s'
+                    }}>{t.label}</button>
+                ))}
+            </div>
+
+            {/* Bekleyenler */}
+            {activeTab === 'unmatched' && (
+                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    {unmatched.length === 0 ? (
+                        <div className="empty-state" style={{ padding: 60 }}>
+                            <div className="icon">🎉</div>
+                            <p style={{ fontWeight: 600, color: '#111827', fontSize: 16 }}>Tüm işlemler eşleştirildi!</p>
+                            <p style={{ fontSize: 13, marginTop: 8 }}>Yeni ekstre yükleyebilirsiniz.</p>
+                        </div>
+                    ) : (
+                        <div>
+                            {unmatched.map((tx, idx) => (
+                                <div key={tx.id}>
+                                    <div style={{
+                                        padding: '16px 24px',
+                                        background: idx % 2 === 0 ? 'white' : '#fafbff',
+                                        borderBottom: '1px solid #f1f5f9'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                                            {/* Sol - işlem bilgisi */}
+                                            <div style={{
+                                                width: 44, height: 44, borderRadius: 12,
+                                                background: '#fef3c7', display: 'flex',
+                                                alignItems: 'center', justifyContent: 'center',
+                                                fontSize: 20, flexShrink: 0
+                                            }}>🏦</div>
+
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                                                    <span style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>
+                                                        {tx.sender_name || 'Bilinmiyor'}
+                                                    </span>
+                                                    <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--success)' }}>
+                                                        {fmt(tx.amount)}
+                                                    </span>
+                                                    <span style={{ fontSize: 12, color: '#9ca3af' }}>
+                                                        {new Date(tx.date).toLocaleDateString('tr-TR')}
+                                                    </span>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                                                    {tx.sender_iban && (
+                                                        <span style={{ fontSize: 12, color: '#6b7280', fontFamily: 'monospace', background: '#f8fafc', padding: '2px 8px', borderRadius: 6 }}>
+                                                            {tx.sender_iban}
+                                                        </span>
+                                                    )}
+                                                    {tx.description && (
+                                                        <span style={{ fontSize: 12, color: '#6b7280' }}>📝 {tx.description}</span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Sağ - eşleştirme */}
+                                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                                                <select
+                                                    style={{
+                                                        padding: '8px 12px', borderRadius: 8,
+                                                        border: '1.5px solid #e2e8f0', fontSize: 13,
+                                                        background: 'white', color: '#374151', cursor: 'pointer'
+                                                    }}
+                                                    defaultValue=""
+                                                    onChange={e => e.target.value && match(tx.id, e.target.value)}
+                                                >
+                                                    <option value="">Manuel seç...</option>
+                                                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                                </select>
+                                                <button
+                                                    onClick={() => getSuggestions(tx.id)}
+                                                    disabled={loadingSuggestion === tx.id}
+                                                    style={{
+                                                        padding: '8px 14px', borderRadius: 8,
+                                                        border: 'none', cursor: 'pointer', fontWeight: 600,
+                                                        fontSize: 13, background: '#1a56db', color: 'white',
+                                                        boxShadow: '0 2px 8px rgba(26,86,219,0.25)', transition: 'all 0.15s',
+                                                        whiteSpace: 'nowrap'
+                                                    }}
+                                                >
+                                                    {loadingSuggestion === tx.id ? '⏳' : '🤖 Öneri Al'}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Öneri sonuçları */}
                                         {suggestions[tx.id] && (
-                                            <tr key={`sug-${tx.id}`}>
-                                                <td colSpan={6} style={{ background: '#f8fafc', padding: '12px 16px' }}>
-                                                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: '#374151' }}>
-                                                        🤖 Algoritma Önerileri:
-                                                    </div>
+                                            <div style={{
+                                                marginTop: 16, padding: '14px 16px',
+                                                background: '#f8fafc', borderRadius: 10,
+                                                border: '1px solid #e8f0fe'
+                                            }}>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 10 }}>
+                                                    🤖 Algoritma Önerileri:
+                                                </div>
+                                                {suggestions[tx.id].length === 0 ? (
+                                                    <span style={{ fontSize: 13, color: '#9ca3af' }}>Eşleşen müşteri bulunamadı</span>
+                                                ) : (
                                                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                                        {suggestions[tx.id].length === 0 ? (
-                                                            <span style={{ fontSize: 13, color: '#9ca3af' }}>Öneri bulunamadı</span>
-                                                        ) : (
-                                                            suggestions[tx.id].map((s, i) => (
-                                                                <div key={i} style={{
-                                                                    background: 'white', border: '1px solid #e8f0fe',
-                                                                    borderRadius: 10, padding: '10px 14px',
-                                                                    display: 'flex', alignItems: 'center', gap: 10
+                                                        {suggestions[tx.id].map((s, i) => (
+                                                            <div key={i} style={{
+                                                                background: 'white', border: '1.5px solid #e8f0fe',
+                                                                borderRadius: 12, padding: '12px 16px',
+                                                                display: 'flex', alignItems: 'center', gap: 14,
+                                                                boxShadow: '0 2px 8px rgba(26,86,219,0.06)',
+                                                                minWidth: 220
+                                                            }}>
+                                                                <div style={{
+                                                                    width: 40, height: 40, borderRadius: '50%',
+                                                                    background: 'var(--primary)', display: 'flex',
+                                                                    alignItems: 'center', justifyContent: 'center',
+                                                                    fontSize: 16, fontWeight: 700, color: 'white', flexShrink: 0
                                                                 }}>
-                                                                    <div>
-                                                                        <div style={{ fontWeight: 600, fontSize: 13, color: '#111827' }}>
-                                                                            {s.customer_name}
-                                                                        </div>
-                                                                        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
-                                                                            {s.method}
-                                                                        </div>
-                                                                        <div style={{ fontSize: 11, color: '#9ca3af' }}>
-                                                                            {s.details}
-                                                                        </div>
+                                                                    {s.customer_name?.[0]?.toUpperCase()}
+                                                                </div>
+                                                                <div style={{ flex: 1 }}>
+                                                                    <div style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>
+                                                                        {s.customer_name}
                                                                     </div>
-                                                                    <div style={{ textAlign: 'center' }}>
-                                                                        <div style={{
-                                                                            background: confidenceBg(s.confidence),
-                                                                            color: confidenceColor(s.confidence),
-                                                                            borderRadius: 999, padding: '2px 10px',
-                                                                            fontSize: 12, fontWeight: 700, marginBottom: 6
-                                                                        }}>
-                                                                            %{s.confidence}
-                                                                        </div>
-                                                                        <button
-                                                                            className="btn btn-primary btn-sm"
-                                                                            onClick={() => match(tx.id, s.customer_id)}
-                                                                        >
-                                                                            Seç
-                                                                        </button>
+                                                                    <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                                                                        {s.method}
+                                                                    </div>
+                                                                    <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                                                                        {s.details}
                                                                     </div>
                                                                 </div>
-                                                            ))
-                                                        )}
+                                                                <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                                                                    <div style={{
+                                                                        background: confidenceBg(s.confidence),
+                                                                        color: confidenceColor(s.confidence),
+                                                                        borderRadius: 999, padding: '3px 10px',
+                                                                        fontSize: 13, fontWeight: 800, marginBottom: 8
+                                                                    }}>
+                                                                        %{s.confidence}
+                                                                    </div>
+                                                                    <button onClick={() => match(tx.id, s.customer_id)} style={{
+                                                                        padding: '6px 14px', borderRadius: 7, border: 'none',
+                                                                        cursor: 'pointer', fontWeight: 600, fontSize: 12,
+                                                                        background: 'var(--primary)', color: 'white'
+                                                                    }}>
+                                                                        Seç ✓
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                </td>
-                                            </tr>
+                                                )}
+                                            </div>
                                         )}
-                                    </>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 
             {/* Eşleşenler */}
-            <div className="card">
-                <h3 style={{ marginBottom: 16, fontSize: 15, fontWeight: 600 }}>
-                    ✅ Eşleştirilmiş İşlemler ({matched.length})
-                </h3>
-                {matched.length === 0 ? (
-                    <div className="empty-state">
-                        <div className="icon">🏦</div>
-                        <p>Henüz eşleştirilmiş işlem yok</p>
-                    </div>
-                ) : (
-                    <div className="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Tarih</th>
-                                    <th>Müşteri</th>
-                                    <th>Gönderen IBAN</th>
-                                    <th>Tutar</th>
-                                    <th>Açıklama</th>
-                                    <th>İşlem</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {matched.map(tx => (
-                                    <tr key={tx.id}>
-                                        <td style={{ fontSize: 13, color: '#6b7280' }}>{new Date(tx.date).toLocaleDateString('tr-TR')}</td>
-                                        <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{getCustomerName(tx.matched_customer_id)}</td>
-                                        <td style={{ fontSize: 12, color: '#6b7280' }}>{tx.sender_iban || '-'}</td>
-                                        <td><span style={{ color: 'var(--success)', fontWeight: 600 }}>{fmt(tx.amount)}</span></td>
-                                        <td style={{ fontSize: 13 }}>{tx.description || '-'}</td>
-                                        <td>
-                                            <button
-                                                className="btn btn-sm"
-                                                style={{ background: '#d1fae5', color: 'var(--success)' }}
-                                                disabled={converting === tx.id}
-                                                onClick={() => convertToPayment(tx.id)}
-                                            >
-                                                {converting === tx.id ? '...' : '💰 Ödemeye Dönüştür'}
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
+            {activeTab === 'matched' && (
+                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    {matched.length === 0 ? (
+                        <div className="empty-state" style={{ padding: 60 }}>
+                            <div className="icon">🏦</div>
+                            <p>Henüz eşleştirilmiş işlem yok</p>
+                        </div>
+                    ) : (
+                        <div>
+                            {matched.map((tx, idx) => (
+                                <div key={tx.id} style={{
+                                    padding: '16px 24px',
+                                    background: idx % 2 === 0 ? 'white' : '#fafbff',
+                                    borderBottom: '1px solid #f1f5f9',
+                                    display: 'flex', alignItems: 'center', gap: 16
+                                }}>
+                                    <div style={{
+                                        width: 44, height: 44, borderRadius: 12,
+                                        background: '#def7ec', display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 20, flexShrink: 0
+                                    }}>✅</div>
+
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                                            <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--primary)' }}>
+                                                {getCustomerName(tx.matched_customer_id)}
+                                            </span>
+                                            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--success)' }}>
+                                                {fmt(tx.amount)}
+                                            </span>
+                                            <span style={{ fontSize: 12, color: '#9ca3af' }}>
+                                                {new Date(tx.date).toLocaleDateString('tr-TR')}
+                                            </span>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 12 }}>
+                                            {tx.sender_iban && (
+                                                <span style={{ fontSize: 12, color: '#6b7280', fontFamily: 'monospace', background: '#f8fafc', padding: '2px 8px', borderRadius: 6 }}>
+                                                    {tx.sender_iban}
+                                                </span>
+                                            )}
+                                            {tx.sender_name && (
+                                                <span style={{ fontSize: 12, color: '#6b7280' }}>
+                                                    👤 {tx.sender_name}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        disabled={converting === tx.id}
+                                        onClick={() => convertToPayment(tx.id)}
+                                        style={{
+                                            padding: '9px 18px', borderRadius: 9, border: 'none',
+                                            cursor: converting === tx.id ? 'not-allowed' : 'pointer',
+                                            fontWeight: 600, fontSize: 13,
+                                            background: converting === tx.id ? '#f3f4f6' : '#def7ec',
+                                            color: converting === tx.id ? '#9ca3af' : 'var(--success)',
+                                            transition: 'all 0.15s', whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        {converting === tx.id ? '...' : '💰 Ödemeye Dönüştür'}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {transactions.length === 0 && (
-                <div className="card">
-                    <div className="empty-state">
-                        <div className="icon">🏦</div>
-                        <p>Henüz ekstre yüklenmedi</p>
-                        <p style={{ fontSize: 13, marginTop: 8 }}>PDF, Excel veya CSV formatında banka ekstrenizi yükleyin</p>
-                    </div>
+                <div className="card" style={{ textAlign: 'center', padding: 60 }}>
+                    <div style={{ fontSize: 64, marginBottom: 16 }}>🏦</div>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 8 }}>
+                        Henüz ekstre yüklenmedi
+                    </h3>
+                    <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 24 }}>
+                        PDF, Excel veya CSV formatında banka ekstrenizi yükleyin
+                    </p>
+                    <label style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 8,
+                        background: 'var(--primary)', color: 'white',
+                        padding: '11px 24px', borderRadius: 10, cursor: 'pointer',
+                        fontWeight: 600, fontSize: 14
+                    }}>
+                        📂 Ekstre Yükle
+                        <input type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={upload} style={{ display: 'none' }} />
+                    </label>
                 </div>
             )}
         </div>
