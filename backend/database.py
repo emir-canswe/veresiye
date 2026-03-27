@@ -12,7 +12,7 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
 
 # 3. Eğer URL yoksa (yani kendi bilgisayarındaysan), eski yerel adresini kullan
 if not DATABASE_URL:
-    DATABASE_URL = "postgresql://veresiye_user:veresiye_pass@localhost:5433/veresiye_db"
+    DATABASE_URL = "postgresql://veresiye_user:veresiye_pass@localhost:5432/veresiye_db"
 
 # Engine artık dinamik olarak doğru adrese bağlanacak
 engine = create_engine(DATABASE_URL)
