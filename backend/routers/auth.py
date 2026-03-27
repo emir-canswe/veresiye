@@ -8,8 +8,9 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from pydantic import BaseModel
 from typing import Optional
+import os
 
-SECRET_KEY = "veresiye_super_secret_key_2024"
+SECRET_KEY = os.getenv("SECRET_KEY", "veresiye_super_secret_key_2024")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 

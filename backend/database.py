@@ -1,7 +1,9 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 # 1. Önce Render'daki Environment Variable'dan URL'yi çekmeye çalışıyoruz
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -12,7 +14,7 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
 
 # 3. Eğer URL yoksa (yani kendi bilgisayarındaysan), eski yerel adresini kullan
 if not DATABASE_URL:
-    DATABASE_URL = "postgresql://veresiye_user:veresiye_pass@localhost:5432/veresiye_db"
+    DATABASE_URL = "postgresql://veresiye_user:veresiye_pass@localhost:5433/veresiye_db"
 
 # Engine artık dinamik olarak doğru adrese bağlanacak
 engine = create_engine(DATABASE_URL)

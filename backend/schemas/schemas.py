@@ -76,7 +76,6 @@ class BankTransactionOut(BaseModel):
     description: Optional[str] = None
     is_matched: bool
     matched_customer_id: Optional[int] = None
-    payment_id: Optional[int] = None
 
     class Config:
         from_attributes = True

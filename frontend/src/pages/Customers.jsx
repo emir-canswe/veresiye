@@ -106,7 +106,7 @@ export default function Customers() {
                 : editForm.notes
             await axios.put(`${API}/customers/${selectedCustomer.id}`, {
                 name: editForm.name, phone: editForm.phone, address: editForm.address,
-                notes: notesWithEmail, son_odeme_tarihi: editForm.son_odeme_tarihi || null, ibans: []
+                notes: notesWithEmail, son_odeme_tarihi: editForm.son_odeme_tarihi || null, ibans: selectedCustomer.ibans || []
             })
             setShowEditModal(false)
             load()

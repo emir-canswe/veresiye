@@ -34,7 +34,7 @@ def export_backup(db: Session = Depends(get_db)):
             for d in debts
         ],
         "payments": [
-            {"id": p.id, "customer_id": p.customer_id, "amount": p.amount, "method": p.method,
+            {"id": p.id, "customer_id": p.customer_id, "amount": p.amount, "method": p.method.value if p.method else None,
              "description": p.description, "date": str(p.date), "created_at": str(p.created_at)}
             for p in payments
         ],

@@ -50,6 +50,8 @@ def delete_category(cat_id: int, db: Session = Depends(get_db)):
     cat = db.query(StockCategory).filter(StockCategory.id == cat_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="Kategori bulunamadı")
+    # Kategoriye bağlı ürünlerin bağlantısını kaldır
+    db.query(Product).filter(Product.category_id == cat_id).update({"category_id": None})
     db.delete(cat)
     db.commit()
     return {"message": "Kategori silindi"}

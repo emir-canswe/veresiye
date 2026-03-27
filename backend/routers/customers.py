@@ -102,6 +102,7 @@ def update_son_odeme(customer_id: int, db: Session = Depends(get_db)):
 
 @router.delete("/{customer_id}")
 def delete_customer(customer_id: int, db: Session = Depends(get_db)):
+    from models.models import StockMovement, Transaction
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Müşteri bulunamadı")
@@ -110,6 +111,8 @@ def delete_customer(customer_id: int, db: Session = Depends(get_db)):
         BankTransaction.matched_customer_id == customer_id
     ).update({"matched_customer_id": None, "is_matched": False})
 
+    db.query(StockMovement).filter(StockMovement.customer_id == customer_id).delete()
+    db.query(Transaction).filter(Transaction.customer_id == customer_id).delete()
     db.query(Payment).filter(Payment.customer_id == customer_id).delete()
     db.query(Debt).filter(Debt.customer_id == customer_id).delete()
     db.query(CustomerIBAN).filter(CustomerIBAN.customer_id == customer_id).delete()
