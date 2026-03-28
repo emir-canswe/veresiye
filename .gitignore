@@ -1,0 +1,30 @@
+# Ortam ve gizli dosyalar
+.env
+**/.env
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/release/
+
+# E2E
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Geçici yedek (eski export davranışı)
+backend/veresiye_yedek_*.json

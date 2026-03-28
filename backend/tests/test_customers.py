@@ -14,6 +14,7 @@ def test_create_and_list_customers(client):
 
 
 def test_duplicate_customer_name(client):
-    client.post("/customers/", json={"name": "Aynı İsim", "ibans": []})
-    r = client.post("/customers/", json={"name": "aynı isim", "ibans": []})
+    # SQLite + PostgreSQL'te tutarlı: ASCII büyük/küçük harf (Türkçe İ/ı ilike farkı pytest SQLite'ta 400 vermeyebiliyor)
+    client.post("/customers/", json={"name": "Dup Müşteri", "ibans": []})
+    r = client.post("/customers/", json={"name": "dup müşteri", "ibans": []})
     assert r.status_code == 400

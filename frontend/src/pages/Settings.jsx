@@ -142,6 +142,8 @@ function UserManagement() {
 }
 
 export default function Settings({ user, onLogout }) {
+    const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` })
+
     const [stats, setStats] = useState(null)
     const [activeTab, setActiveTab] = useState('hesap')
     const [usernameForm, setUsernameForm] = useState({ newUsername: '' })
@@ -149,19 +151,69 @@ export default function Settings({ user, onLogout }) {
     const [usernameMsg, setUsernameMsg] = useState(null)
     const [passwordMsg, setPasswordMsg] = useState(null)
     const [loading, setLoading] = useState(false)
+    const [companyForm, setCompanyForm] = useState({ company_name: '', tax_id: '', phone: '', address: '', city: '' })
+    const [companyMsg, setCompanyMsg] = useState(null)
+    const [restoreConfirm, setRestoreConfirm] = useState('')
+    const [restoreMsg, setRestoreMsg] = useState(null)
 
     useEffect(() => {
-        axios.get(`${API}/backup/stats`).then(r => setStats(r.data))
+        axios.get(`${API}/backup/stats`, { headers: authHeaders() }).then(r => setStats(r.data)).catch(() => setStats(null))
     }, [])
 
+    useEffect(() => {
+        if (user?.role !== 'admin' || activeTab !== 'isletme') return
+        axios.get(`${API}/company/settings`, { headers: authHeaders() })
+            .then(r => setCompanyForm({
+                company_name: r.data.company_name || '',
+                tax_id: r.data.tax_id || '',
+                phone: r.data.phone || '',
+                address: r.data.address || '',
+                city: r.data.city || ''
+            }))
+            .catch(() => setCompanyMsg({ type: 'error', text: 'Şirket bilgileri yüklenemedi.' }))
+    }, [activeTab, user?.role])
+
+    const saveCompany = async () => {
+        setCompanyMsg(null)
+        try {
+            await axios.put(`${API}/company/settings`, companyForm, { headers: authHeaders() })
+            setCompanyMsg({ type: 'success', text: 'Şirket bilgileri kaydedildi.' })
+        } catch (e) {
+            setCompanyMsg({ type: 'error', text: e.response?.data?.detail || 'Kayıt başarısız.' })
+        }
+    }
+
     const downloadBackup = async () => {
-        const res = await axios.get(`${API}/backup/export`, { responseType: 'blob' })
+        const res = await axios.get(`${API}/backup/export`, { responseType: 'blob', headers: authHeaders() })
         const url = window.URL.createObjectURL(new Blob([res.data]))
         const a = document.createElement('a')
         a.href = url
         a.download = `tahsilat_yedek_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')}.json`
         a.click()
         window.URL.revokeObjectURL(url)
+    }
+
+    const uploadRestore = async (e) => {
+        const file = e.target.files?.[0]
+        e.target.value = ''
+        if (!file) return
+        setRestoreMsg(null)
+        if (restoreConfirm.trim() !== 'YEDEKTEN_YUKLE') {
+            setRestoreMsg({ type: 'error', text: 'Onay kutusuna tam olarak YEDEKTEN_YUKLE yazın.' })
+            return
+        }
+        if (!confirm('Tüm cari, stok ve gelir/gider verileri silinip yedekle değiştirilecek. Kullanıcı hesapları korunur. Devam?')) return
+        const fd = new FormData()
+        fd.append('file', file)
+        fd.append('confirm', 'YEDEKTEN_YUKLE')
+        try {
+            await axios.post(`${API}/backup/import`, fd, { headers: authHeaders() })
+            setRestoreMsg({ type: 'success', text: 'Geri yükleme tamamlandı. Sayfayı yenilemeniz önerilir.' })
+            const r = await axios.get(`${API}/backup/stats`, { headers: authHeaders() })
+            setStats(r.data)
+        } catch (err) {
+            setRestoreMsg({ type: 'error', text: err.response?.data?.detail || 'Geri yükleme başarısız.' })
+        }
     }
 
     const changeUsername = async () => {
@@ -227,6 +279,7 @@ export default function Settings({ user, onLogout }) {
 
     const tabs = [
         { id: 'hesap', label: 'Hesap', icon: '👤' },
+        ...(user?.role === 'admin' ? [{ id: 'isletme', label: 'İşletme', icon: '🏢' }] : []),
         { id: 'guvenlik', label: 'Güvenlik', icon: '🔒' },
         { id: 'yedek', label: 'Yedekleme', icon: '💾' },
         ...(user?.role === 'admin' ? [{ id: 'kullanicilar', label: 'Kullanıcılar', icon: '👥' }] : [])
@@ -362,6 +415,48 @@ export default function Settings({ user, onLogout }) {
                         </div>
                     )}
 
+                    {activeTab === 'isletme' && user?.role === 'admin' && (
+                        <div className="card">
+                            <div style={{ marginBottom: 24, paddingBottom: 20, borderBottom: '1px solid #f1f5f9' }}>
+                                <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4, color: '#111827' }}>İşletme bilgileri</h3>
+                                <p style={{ fontSize: 13, color: '#6b7280' }}>Raporlarda ve belgelerde görünecek şirket adı ve iletişim bilgileri.</p>
+                            </div>
+                            {companyMsg && (
+                                <div style={{
+                                    padding: '11px 16px', borderRadius: 10, marginBottom: 18, fontSize: 13, fontWeight: 500,
+                                    background: companyMsg.type === 'success' ? '#def7ec' : '#fde8e8',
+                                    color: companyMsg.type === 'success' ? '#057a55' : '#e02424',
+                                    border: `1px solid ${companyMsg.type === 'success' ? '#a7f3d0' : '#fca5a5'}`
+                                }}>
+                                    {companyMsg.type === 'success' ? '✅' : '❌'} {companyMsg.text}
+                                </div>
+                            )}
+                            <div className="form-group">
+                                <label>Şirket / işletme adı *</label>
+                                <input value={companyForm.company_name} onChange={e => setCompanyForm({ ...companyForm, company_name: e.target.value })} placeholder="Örn. ABC Ticaret Ltd." />
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Vergi no</label>
+                                    <input value={companyForm.tax_id} onChange={e => setCompanyForm({ ...companyForm, tax_id: e.target.value })} />
+                                </div>
+                                <div className="form-group">
+                                    <label>Telefon</label>
+                                    <input value={companyForm.phone} onChange={e => setCompanyForm({ ...companyForm, phone: e.target.value })} />
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label>Şehir</label>
+                                <input value={companyForm.city} onChange={e => setCompanyForm({ ...companyForm, city: e.target.value })} />
+                            </div>
+                            <div className="form-group">
+                                <label>Adres</label>
+                                <textarea rows={3} value={companyForm.address} onChange={e => setCompanyForm({ ...companyForm, address: e.target.value })} />
+                            </div>
+                            <button type="button" className="btn btn-primary" onClick={saveCompany} disabled={!companyForm.company_name?.trim()}>Kaydet</button>
+                        </div>
+                    )}
+
                     {activeTab === 'guvenlik' && (
                         <div className="card">
                             <div style={{ marginBottom: 24, paddingBottom: 20, borderBottom: '1px solid #f1f5f9' }}>
@@ -421,12 +516,14 @@ export default function Settings({ user, onLogout }) {
                     {activeTab === 'yedek' && (
                         <div>
                             {stats && (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 20 }}>
                                     {[
                                         { icon: '👥', label: 'Müşteri', value: stats.musteri_sayisi, cls: 'primary', bg: '#dbeafe' },
                                         { icon: '📋', label: 'Borç Kaydı', value: stats.borc_sayisi, cls: 'danger', bg: '#fde8e8' },
                                         { icon: '💰', label: 'Ödeme Kaydı', value: stats.odeme_sayisi, cls: 'success', bg: '#def7ec' },
                                         { icon: '🏦', label: 'Banka İşlemi', value: stats.banka_islemi_sayisi, cls: 'warning', bg: '#fdf6b2' },
+                                        { icon: '📦', label: 'Stok Ürün', value: stats.stok_urun ?? 0, cls: 'primary', bg: '#e0e7ff' },
+                                        { icon: '💼', label: 'Gelir/Gider', value: stats.gelir_gider ?? 0, cls: 'primary', bg: '#dbeafe' },
                                     ].map(s => (
                                         <div key={s.label} className="stat-card" style={{ padding: '18px 20px' }}>
                                             <div style={{ width: 38, height: 38, borderRadius: 10, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, marginBottom: 8 }}>{s.icon}</div>
@@ -447,15 +544,44 @@ export default function Settings({ user, onLogout }) {
                                     <div style={{ flex: 1 }}>
                                         <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6, color: '#111827' }}>Veri Yedeği İndir</div>
                                         <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 18, lineHeight: 1.7 }}>
-                                            Tüm müşteri, borç ve ödeme verileriniz JSON formatında dışa aktarılır.
-                                            Verilerinizi kaybetmemek için düzenli yedek almanız önerilir.
+                                            Müşteri, borç, ödeme, banka işlemleri, stok ve gelir/gider kayıtları JSON olarak dışa aktarılır (sadece admin).
                                         </p>
-                                        <button type="button" data-testid="settings-backup-download" className="btn btn-primary" onClick={downloadBackup}>
-                                            ⬇️ Yedeği İndir
-                                        </button>
+                                        {user?.role === 'admin' ? (
+                                            <button type="button" data-testid="settings-backup-download" className="btn btn-primary" onClick={downloadBackup}>
+                                                ⬇️ Yedeği İndir
+                                            </button>
+                                        ) : (
+                                            <p style={{ fontSize: 13, color: '#9ca3af' }}>Yedek indirmek için admin hesabı gerekir.</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
+
+                            {user?.role === 'admin' && (
+                                <div className="card" style={{ marginTop: 20, border: '1px solid #fecaca', background: '#fffafa' }}>
+                                    <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, color: '#b91c1c' }}>Yedekten geri yükle</div>
+                                    <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 14, lineHeight: 1.7 }}>
+                                        Bu işlem mevcut cari, stok ve gelir/gider verilerini siler ve yedekteki kayıtlarla değiştirir. Kullanıcı hesapları silinmez.
+                                    </p>
+                                    {restoreMsg && (
+                                        <div style={{
+                                            padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13,
+                                            background: restoreMsg.type === 'success' ? '#def7ec' : '#fde8e8',
+                                            color: restoreMsg.type === 'success' ? '#057a55' : '#e02424'
+                                        }}>
+                                            {restoreMsg.text}
+                                        </div>
+                                    )}
+                                    <div className="form-group">
+                                        <label>Onay metni (tam yazın)</label>
+                                        <input value={restoreConfirm} onChange={e => setRestoreConfirm(e.target.value)} placeholder="YEDEKTEN_YUKLE" style={{ fontFamily: 'monospace' }} />
+                                    </div>
+                                    <label className="btn btn-outline" style={{ cursor: 'pointer', display: 'inline-block' }}>
+                                        📤 JSON yedeği seç
+                                        <input type="file" accept=".json,application/json" style={{ display: 'none' }} onChange={uploadRestore} />
+                                    </label>
+                                </div>
+                            )}
                         </div>
                     )}
 
