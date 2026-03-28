@@ -3,6 +3,12 @@ import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env.BASE_URL ?? 'http://127.0.0.1:5173';
 
+/** Windows'ta Playwright alt sürecinde `npm` bazen çalışmaz; `npm.cmd` + Vite'a host verilir. */
+const devCommand =
+  process.platform === 'win32'
+    ? 'npm.cmd run dev -- --host 127.0.0.1 --strictPort'
+    : 'npm run dev -- --host 127.0.0.1 --strictPort';
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: false,
@@ -20,10 +26,12 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
   },
   webServer: {
-    command: 'npm run dev',
+    command: devCommand,
     cwd: path.join(__dirname, '../frontend'),
     url: baseURL,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
+    stdout: 'pipe',
+    stderr: 'pipe',
   },
 });
