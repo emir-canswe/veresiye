@@ -2,14 +2,16 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import engine
+from sqlalchemy import text
+
+from database import SessionLocal, engine
 from models.models import Base
 from routers import customers, debts, payments, dashboard, bank
-from routers import auth, backup, stock, finance, notifications
+from routers import auth, backup, stock, finance, notifications, company
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="TahsilatPro API", version="2.0.0")
+app = FastAPI(title="TahsilatPro API", version="2.1.0")
 
 _cors_raw = os.getenv(
     "CORS_ORIGINS",
@@ -38,7 +40,26 @@ app.include_router(backup.router)
 app.include_router(stock.router)
 app.include_router(finance.router)
 app.include_router(notifications.router)
+app.include_router(company.router)
+
 
 @app.get("/")
 def root():
-    return {"message": "TahsilatPro API calisiyor"}
+    return {"message": "TahsilatPro API calisiyor", "version": "2.1.0"}
+
+
+@app.get("/health")
+def health():
+    ok = True
+    detail = {}
+    try:
+        db = SessionLocal()
+        try:
+            db.execute(text("SELECT 1"))
+            detail["database"] = "ok"
+        finally:
+            db.close()
+    except Exception as e:
+        ok = False
+        detail["database"] = f"error: {e!s}"
+    return {"status": "ok" if ok else "degraded", "detail": detail}

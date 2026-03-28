@@ -13,11 +13,18 @@ export default function Reports() {
     const [selectedCustomer, setSelectedCustomer] = useState('')
     const [dateFrom, setDateFrom] = useState('')
     const [dateTo, setDateTo] = useState('')
+    const [reportBrand, setReportBrand] = useState('TahsilatPro')
 
     useEffect(() => {
         axios.get(`${API}/customers/`).then(r => setCustomers(r.data))
         axios.get(`${API}/debts/`).then(r => setDebts(r.data))
         axios.get(`${API}/payments/`).then(r => setPayments(r.data))
+        const token = localStorage.getItem('token')
+        if (token) {
+            axios.get(`${API}/company/settings`, { headers: { Authorization: `Bearer ${token}` } })
+                .then(r => setReportBrand(r.data.company_name || 'TahsilatPro'))
+                .catch(() => {})
+        }
     }, [])
 
     const getCustomerName = (id) => customers.find(c => c.id === id)?.name || '-'
@@ -55,7 +62,7 @@ export default function Reports() {
 
         doc.setFontSize(18)
         doc.setFont('helvetica', 'bold')
-        doc.text('Veresiye', 14, 20)
+        doc.text(reportBrand, 14, 20)
 
         doc.setFontSize(13)
         doc.setFont('helvetica', 'normal')

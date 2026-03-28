@@ -9,6 +9,14 @@ test.describe('Ayarlar ve admin kullanıcı yönetimi', () => {
     await expect(page.getByTestId('settings-tab-hesap')).toBeVisible();
   });
 
+  test('Admin İşletme sekmesini görür', async ({ page }) => {
+    await loginAs(page, users.admin);
+    await openSettings(page);
+    await expect(page.getByTestId('settings-tab-isletme')).toBeVisible();
+    await page.getByTestId('settings-tab-isletme').click();
+    await expect(page.getByText('İşletme bilgileri')).toBeVisible();
+  });
+
   test('Admin yeni kullanıcı oluşturur', async ({ page }) => {
     const newUser = `e2e_created_${Date.now()}`;
     await loginAs(page, users.admin);

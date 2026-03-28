@@ -53,7 +53,16 @@ def parse_excel(content: bytes) -> list[dict]:
     return transactions
 
 def parse_csv(content: bytes) -> list[dict]:
-    df = pd.read_csv(io.BytesIO(content))
+    buf = io.BytesIO(content)
+    try:
+        df = pd.read_csv(buf, encoding="utf-8-sig", sep=None, engine="python")
+    except Exception:
+        buf.seek(0)
+        try:
+            df = pd.read_csv(buf, encoding="cp1254", sep=None, engine="python")
+        except Exception:
+            buf.seek(0)
+            df = pd.read_csv(buf, encoding="utf-8", sep=";", engine="python")
     df.columns = [str(c).lower().strip() for c in df.columns]
     transactions = []
     for _, row in df.iterrows():

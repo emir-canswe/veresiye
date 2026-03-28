@@ -17,6 +17,18 @@ class TransactionType(str, enum.Enum):
     gelir = "gelir"
     gider = "gider"
 
+class CompanySettings(Base):
+    """Tek şirket modu: tek satır (id=1) işletme bilgisi."""
+    __tablename__ = "company_settings"
+    id = Column(Integer, primary_key=True, index=True)
+    company_name = Column(String, nullable=False, default="İşletmem")
+    tax_id = Column(String)
+    phone = Column(String)
+    address = Column(Text)
+    city = Column(String)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
