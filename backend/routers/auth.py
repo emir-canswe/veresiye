@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -9,7 +10,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel
 from typing import Optional
 
-SECRET_KEY = "veresiye_super_secret_key_2024"
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-insecure-set-secret-key-in-env")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 

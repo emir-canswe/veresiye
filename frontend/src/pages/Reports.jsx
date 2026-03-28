@@ -160,8 +160,8 @@ export default function Reports() {
                     <p className="page-subtitle">PDF veya Excel formatında rapor alın</p>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
-                    <button className="btn btn-outline" onClick={exportExcel}>📊 Excel İndir</button>
-                    <button className="btn btn-primary" onClick={exportPDF}>📄 PDF İndir</button>
+                    <button type="button" data-testid="reports-excel" className="btn btn-outline" onClick={exportExcel}>📊 Excel İndir</button>
+                    <button type="button" data-testid="reports-pdf" className="btn btn-primary" onClick={exportPDF}>📄 PDF İndir</button>
                 </div>
             </div>
 

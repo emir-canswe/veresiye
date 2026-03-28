@@ -1,0 +1,63 @@
+{
+  "backup_date": "2026-03-28T09:15:18.279229",
+  "version": "1.0",
+  "customers": [
+    {
+      "id": 21,
+      "name": "Emircan Can",
+      "phone": "679978977",
+      "address": "",
+      "notes": "email:canemircan38@gmail.com",
+      "created_at": "2026-03-27 19:18:52.553419"
+    },
+    {
+      "id": 22,
+      "name": "E2E Müşteri 1774689267781",
+      "phone": null,
+      "address": "",
+      "notes": "",
+      "created_at": "2026-03-28 09:14:29.381199"
+    },
+    {
+      "id": 23,
+      "name": "E2E Detay 1774689270137",
+      "phone": null,
+      "address": "",
+      "notes": "",
+      "created_at": "2026-03-28 09:14:31.712134"
+    }
+  ],
+  "customer_ibans": [
+    {
+      "id": 23,
+      "customer_id": 21,
+      "iban": "868686876",
+      "label": "Ana IBAN"
+    }
+  ],
+  "debts": [
+    {
+      "id": 53,
+      "customer_id": 21,
+      "amount": 1222.0,
+      "description": "",
+      "category": "",
+      "date": "2026-03-27 19:18:58.562059",
+      "created_at": "2026-03-27 19:18:58.563716"
+    }
+  ],
+  "payments": [],
+  "bank_transactions": [
+    {
+      "id": 18,
+      "transaction_hash": "de2a962b52c67aeff5d0fc22707004e5",
+      "date": "2024-01-01 00:00:00",
+      "sender_name": "E2E Test",
+      "sender_iban": "TR330006100519786457841326",
+      "amount": 150.0,
+      "description": "E2E CSV",
+      "is_matched": false,
+      "matched_customer_id": null
+    }
+  ]
+}

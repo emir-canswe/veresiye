@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine
@@ -9,9 +11,18 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="TahsilatPro API", version="2.0.0")
 
+_cors_raw = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173,null",
+).strip()
+if _cors_raw == "*":
+    _allow_origins = ["*"]
+else:
+    _allow_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

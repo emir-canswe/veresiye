@@ -1,4 +1,4 @@
-import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
+import { Routes, Route, NavLink } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import Dashboard from './pages/Dashboard'
 import Customers from './pages/Customers'
@@ -48,7 +48,6 @@ function App() {
   if (!checked) return null
   if (!user) return <Login onLogin={onLogin} />
 
-  const isAdmin = user.role === 'admin'
   const isMuhasebeci = user.role === 'muhasebeci'
   const isCalisan = user.role === 'calisan'
 
@@ -66,36 +65,36 @@ function App() {
       <nav className="navbar">
         <div className="navbar-logo">Tahsilat<span>Pro</span></div>
         <div className="navbar-nav">
-          <NavLink to="/" end className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <NavLink to="/" end data-testid="nav-dashboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             📊 Dashboard
           </NavLink>
           {/* Çalışan ve Admin görebilir */}
           {!isMuhasebeci && (
-            <NavLink to="/customers" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <NavLink to="/customers" data-testid="nav-customers" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               👥 Müşteriler
             </NavLink>
           )}
           {/* Sadece Admin ve Çalışan */}
           {!isMuhasebeci && (
-            <NavLink to="/stock" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <NavLink to="/stock" data-testid="nav-stock" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               📦 Stok
             </NavLink>
           )}
           {/* Admin ve Muhasebeci */}
           {!isCalisan && (
-            <NavLink to="/finance" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <NavLink to="/finance" data-testid="nav-finance" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               💼 Gelir/Gider
             </NavLink>
           )}
           {/* Akıllı Ödeme - Admin ve Çalışan */}
           {!isMuhasebeci && (
-            <NavLink to="/bank" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <NavLink to="/bank" data-testid="nav-bank" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               🏦 Akıllı Ödeme
             </NavLink>
           )}
           {/* Raporlar - Admin ve Muhasebeci */}
           {!isCalisan && (
-            <NavLink to="/reports" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <NavLink to="/reports" data-testid="nav-reports" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               📈 Raporlar
             </NavLink>
           )}
@@ -103,6 +102,8 @@ function App() {
 
         <div style={{ marginLeft: 'auto', position: 'relative' }} ref={dropdownRef}>
           <button
+            type="button"
+            data-testid="user-menu-trigger"
             onClick={() => setDropdownOpen(!dropdownOpen)}
             style={{
               display: 'flex', alignItems: 'center', gap: 10,
@@ -153,7 +154,7 @@ function App() {
                 </div>
               </div>
               <div style={{ padding: '8px' }}>
-                <NavLink to="/settings" onClick={() => setDropdownOpen(false)}
+                <NavLink to="/settings" data-testid="nav-settings" onClick={() => setDropdownOpen(false)}
                   style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 9, color: '#374151', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}
                   onMouseEnter={e => e.currentTarget.style.background = '#f8faff'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -161,7 +162,7 @@ function App() {
                   <span>⚙️</span> Ayarlar
                 </NavLink>
                 <div style={{ height: 1, background: '#f1f5f9', margin: '6px 0' }} />
-                <button onClick={onLogout}
+                <button type="button" data-testid="user-logout" onClick={onLogout}
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 9, color: 'var(--danger)', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500, textAlign: 'left' }}
                   onMouseEnter={e => e.currentTarget.style.background = '#fde8e8'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}

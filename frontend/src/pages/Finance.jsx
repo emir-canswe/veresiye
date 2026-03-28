@@ -58,7 +58,7 @@ export default function Finance() {
                     <h1 className="page-title">Gelir / Gider</h1>
                     <p className="page-subtitle">İşletme gelir ve giderlerinizi takip edin</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Yeni İşlem</button>
+                <button type="button" data-testid="finance-add" className="btn btn-primary" onClick={() => setShowModal(true)}>+ Yeni İşlem</button>
             </div>
 
             {/* Özet kartlar */}
@@ -158,25 +158,25 @@ export default function Finance() {
 
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
+                    <div className="modal" data-testid="finance-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-title">Yeni Gelir / Gider</div>
                         <div className="form-row">
                             <div className="form-group">
                                 <label>İşlem Türü *</label>
-                                <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+                                <select data-testid="finance-type" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
                                     <option value="gelir">📈 Gelir</option>
                                     <option value="gider">📉 Gider</option>
                                 </select>
                             </div>
                             <div className="form-group">
                                 <label>Tutar (₺) *</label>
-                                <input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
+                                <input data-testid="finance-amount" type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
                             </div>
                         </div>
                         <div className="form-row">
                             <div className="form-group">
                                 <label>Kategori</label>
-                                <input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="Kira, Fatura, Satış..." />
+                                <input data-testid="finance-category" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="Kira, Fatura, Satış..." />
                             </div>
                             <div className="form-group">
                                 <label>Ödeme Yöntemi</label>
@@ -195,8 +195,8 @@ export default function Finance() {
                             <textarea rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
                         </div>
                         <div className="modal-footer">
-                            <button className="btn" onClick={() => setShowModal(false)}>İptal</button>
-                            <button className="btn btn-primary" onClick={save} disabled={!form.amount}>Kaydet</button>
+                            <button type="button" className="btn" onClick={() => setShowModal(false)}>İptal</button>
+                            <button type="button" data-testid="finance-save" className="btn btn-primary" onClick={save} disabled={!form.amount}>Kaydet</button>
                         </div>
                     </div>
                 </div>

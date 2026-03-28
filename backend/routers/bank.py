@@ -31,7 +31,7 @@ def parse_pdf(content: bytes) -> list[dict]:
                         "amount": float(str(row[3]).replace(",", ".").replace(" ", "")),
                         "description": row[4] if len(row) > 4 else ""
                     })
-                except:
+                except (ValueError, TypeError, IndexError):
                     continue
     return transactions
 
@@ -48,7 +48,24 @@ def parse_excel(content: bytes) -> list[dict]:
                 "amount": float(str(row.get("tutar", row.get("amount", 0))).replace(",", ".")),
                 "description": str(row.get("aciklama", row.get("description", "")))
             })
-        except:
+        except (ValueError, TypeError, KeyError):
+            continue
+    return transactions
+
+def parse_csv(content: bytes) -> list[dict]:
+    df = pd.read_csv(io.BytesIO(content))
+    df.columns = [str(c).lower().strip() for c in df.columns]
+    transactions = []
+    for _, row in df.iterrows():
+        try:
+            transactions.append({
+                "date": str(row.get("tarih", row.get("date", ""))),
+                "sender_name": str(row.get("gonderen", row.get("sender", ""))),
+                "sender_iban": str(row.get("iban", "")),
+                "amount": float(str(row.get("tutar", row.get("amount", 0))).replace(",", ".")),
+                "description": str(row.get("aciklama", row.get("description", "")))
+            })
+        except (ValueError, TypeError, KeyError):
             continue
     return transactions
 
@@ -66,7 +83,7 @@ async def upload_statement(file: UploadFile = File(...), db: Session = Depends(g
     elif filename.endswith(".xlsx") or filename.endswith(".xls"):
         rows = parse_excel(content)
     elif filename.endswith(".csv"):
-        rows = parse_excel(content)
+        rows = parse_csv(content)
     else:
         raise HTTPException(status_code=400, detail="Desteklenmeyen dosya formatı.")
 
@@ -78,7 +95,7 @@ async def upload_statement(file: UploadFile = File(...), db: Session = Depends(g
             continue
         try:
             date = datetime.strptime(str(row["date"]), "%d.%m.%Y")
-        except:
+        except (ValueError, TypeError):
             date = datetime.utcnow()
 
         tx = BankTransaction(

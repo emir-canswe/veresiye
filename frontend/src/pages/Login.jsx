@@ -137,6 +137,7 @@ export default function Login({ onLogin }) {
                             <div style={{ marginBottom: 18 }}>
                                 <label style={labelStyle}>Kullanıcı Adı</label>
                                 <input
+                                    data-testid="login-username"
                                     style={inputStyle}
                                     value={form.username}
                                     onChange={e => setForm({ ...form, username: e.target.value })}
@@ -151,6 +152,7 @@ export default function Login({ onLogin }) {
                                 <label style={labelStyle}>Şifre</label>
                                 <div style={{ position: 'relative' }}>
                                     <input
+                                        data-testid="login-password"
                                         style={{ ...inputStyle, paddingRight: 44 }}
                                         type={showPass ? 'text' : 'password'}
                                         value={form.password}
@@ -170,6 +172,8 @@ export default function Login({ onLogin }) {
                             </div>
 
                             <button
+                                type="button"
+                                data-testid="login-submit"
                                 onClick={login}
                                 disabled={loading || !form.username || !form.password}
                                 style={{
@@ -187,6 +191,7 @@ export default function Login({ onLogin }) {
                             <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: '#6b7280' }}>
                                 Hesabınız yok mu?{' '}
                                 <span
+                                    data-testid="login-open-register"
                                     style={{ color: '#1a56db', cursor: 'pointer', fontWeight: 700 }}
                                     onClick={() => { setShowRegister(true); setError('') }}
                                 >
@@ -217,6 +222,7 @@ export default function Login({ onLogin }) {
                             <div style={{ marginBottom: 18 }}>
                                 <label style={labelStyle}>Kullanıcı Adı</label>
                                 <input
+                                    data-testid="register-username"
                                     style={inputStyle}
                                     value={regForm.username}
                                     onChange={e => setRegForm({ ...regForm, username: e.target.value })}
@@ -230,6 +236,7 @@ export default function Login({ onLogin }) {
                                 <label style={labelStyle}>Şifre</label>
                                 <div style={{ position: 'relative' }}>
                                     <input
+                                        data-testid="register-password"
                                         style={{ ...inputStyle, paddingRight: 44 }}
                                         type={showRegPass ? 'text' : 'password'}
                                         value={regForm.password}
@@ -261,6 +268,7 @@ export default function Login({ onLogin }) {
                             <div style={{ marginBottom: 24 }}>
                                 <label style={labelStyle}>Şifre Tekrar</label>
                                 <input
+                                    data-testid="register-password-confirm"
                                     style={inputStyle}
                                     type="password"
                                     value={regForm.password2}
@@ -280,6 +288,8 @@ export default function Login({ onLogin }) {
                             </div>
 
                             <button
+                                type="button"
+                                data-testid="register-submit"
                                 onClick={register}
                                 disabled={loading || !regForm.username || !regForm.password}
                                 style={{
@@ -297,6 +307,7 @@ export default function Login({ onLogin }) {
                             <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: '#6b7280' }}>
                                 Zaten hesabınız var mı?{' '}
                                 <span
+                                    data-testid="register-open-login"
                                     style={{ color: '#1a56db', cursor: 'pointer', fontWeight: 700 }}
                                     onClick={() => { setShowRegister(false); setError('') }}
                                 >

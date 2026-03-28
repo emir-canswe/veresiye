@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import API from '../api'
@@ -19,13 +19,13 @@ export default function CustomerDetail() {
     const [ibanForm, setIbanForm] = useState({ iban: '', label: '' })
     const [sending, setSending] = useState(false)
 
-    const load = () => {
+    const load = useCallback(() => {
         axios.get(`${API}/customers/${id}`).then(r => setCustomer(r.data))
         axios.get(`${API}/debts/customer/${id}`).then(r => setDebts(r.data))
         axios.get(`${API}/payments/customer/${id}`).then(r => setPayments(r.data))
-    }
+    }, [id])
 
-    useEffect(() => { load() }, [id])
+    useEffect(() => { load() }, [load])
 
     const totalDebt = debts.reduce((s, d) => s + d.amount, 0)
     const totalPayment = payments.reduce((s, p) => s + p.amount, 0)
@@ -115,8 +115,6 @@ export default function CustomerDetail() {
         return null
     }
 
-    const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-
     if (!customer) return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200 }}>
             <div style={{ color: '#6b7280' }}>Yükleniyor...</div>
@@ -145,7 +143,7 @@ export default function CustomerDetail() {
                         ← Müşteriler
                     </button>
                     <div>
-                        <h1 className="page-title">{customer.name}</h1>
+                        <h1 className="page-title" data-testid="customer-detail-title">{customer.name}</h1>
                         <p className="page-subtitle">
                             {customer.phone && `📞 ${customer.phone}`}
                             {customer.phone && email && ' · '}
@@ -315,7 +313,7 @@ export default function CustomerDetail() {
                             <tbody>
                                 {(() => {
                                     let balance = 0
-                                    const rows = [...allTransactions].reverse().map((tx, i) => {
+                                    const rows = [...allTransactions].reverse().map((tx) => {
                                         if (tx.type === 'debt') balance += tx.amount
                                         else balance -= tx.amount
                                         return { ...tx, balance }
