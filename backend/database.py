@@ -1,4 +1,10 @@
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent / ".env")
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -14,8 +20,16 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
 if not DATABASE_URL:
     DATABASE_URL = "postgresql://veresiye_user:veresiye_pass@localhost:5433/veresiye_db"
 
-# Engine artık dinamik olarak doğru adrese bağlanacak
-engine = create_engine(DATABASE_URL)
+# SQLite (ör. pytest) için tek bellek havuzu — aksi halde :memory: her bağlantıda boş DB olur
+_connect_args = {}
+_engine_kwargs = {}
+if DATABASE_URL.startswith("sqlite"):
+    from sqlalchemy.pool import StaticPool
+
+    _connect_args["check_same_thread"] = False
+    _engine_kwargs["poolclass"] = StaticPool
+
+engine = create_engine(DATABASE_URL, connect_args=_connect_args, **_engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

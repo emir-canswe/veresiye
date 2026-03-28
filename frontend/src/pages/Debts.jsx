@@ -53,7 +53,7 @@ export default function Debts() {
                     <h1 className="page-title">Borçlar</h1>
                     <p className="page-subtitle">{debts.length} kayıt · Toplam: {fmt(debts.reduce((s, d) => s + d.amount, 0))}</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Yeni Borç</button>
+                <button type="button" data-testid="debts-add" className="btn btn-primary" onClick={() => setShowModal(true)}>+ Yeni Borç</button>
             </div>
 
             <div className="card">
@@ -119,11 +119,11 @@ export default function Debts() {
 
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
+                    <div className="modal" data-testid="debt-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-title">Yeni Borç Ekle</div>
                         <div className="form-group">
                             <label>Müşteri *</label>
-                            <select value={form.customer_id} onChange={e => setForm({ ...form, customer_id: e.target.value })}>
+                            <select data-testid="debt-customer" value={form.customer_id} onChange={e => setForm({ ...form, customer_id: e.target.value })}>
                                 <option value="">Seçiniz...</option>
                                 {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
@@ -131,11 +131,11 @@ export default function Debts() {
                         <div className="form-row">
                             <div className="form-group">
                                 <label>Tutar (₺) *</label>
-                                <input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
+                                <input data-testid="debt-amount" type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
                             </div>
                             <div className="form-group">
                                 <label>Kategori</label>
-                                <input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="Gıda, Elektronik..." />
+                                <input data-testid="debt-category" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="Gıda, Elektronik..." />
                             </div>
                         </div>
                         <div className="form-group">
@@ -143,8 +143,8 @@ export default function Debts() {
                             <textarea rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
                         </div>
                         <div className="modal-footer">
-                            <button className="btn" onClick={() => setShowModal(false)}>İptal</button>
-                            <button className="btn btn-primary" onClick={save} disabled={!form.customer_id || !form.amount}>Kaydet</button>
+                            <button type="button" className="btn" onClick={() => setShowModal(false)}>İptal</button>
+                            <button type="button" data-testid="debt-save" className="btn btn-primary" onClick={save} disabled={!form.customer_id || !form.amount}>Kaydet</button>
                         </div>
                     </div>
                 </div>

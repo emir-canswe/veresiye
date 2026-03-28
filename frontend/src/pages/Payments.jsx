@@ -50,7 +50,7 @@ export default function Payments() {
                     <h1 className="page-title">Ödemeler</h1>
                     <p className="page-subtitle">{payments.length} kayıt · Toplam: {fmt(payments.reduce((s, p) => s + p.amount, 0))}</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Yeni Ödeme</button>
+                <button type="button" data-testid="payments-add" className="btn btn-primary" onClick={() => setShowModal(true)}>+ Yeni Ödeme</button>
             </div>
 
             <div className="card">
@@ -115,11 +115,11 @@ export default function Payments() {
 
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
+                    <div className="modal" data-testid="payment-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-title">Yeni Ödeme Ekle</div>
                         <div className="form-group">
                             <label>Müşteri *</label>
-                            <select value={form.customer_id} onChange={e => setForm({ ...form, customer_id: e.target.value })}>
+                            <select data-testid="payment-customer" value={form.customer_id} onChange={e => setForm({ ...form, customer_id: e.target.value })}>
                                 <option value="">Seçiniz...</option>
                                 {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
@@ -127,11 +127,11 @@ export default function Payments() {
                         <div className="form-row">
                             <div className="form-group">
                                 <label>Tutar (₺) *</label>
-                                <input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
+                                <input data-testid="payment-amount" type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
                             </div>
                             <div className="form-group">
                                 <label>Ödeme Yöntemi *</label>
-                                <select value={form.method} onChange={e => setForm({ ...form, method: e.target.value })}>
+                                <select data-testid="payment-method" value={form.method} onChange={e => setForm({ ...form, method: e.target.value })}>
                                     <option value="nakit">💵 Nakit</option>
                                     <option value="banka">🏦 Banka Transferi</option>
                                 </select>
@@ -142,8 +142,8 @@ export default function Payments() {
                             <textarea rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
                         </div>
                         <div className="modal-footer">
-                            <button className="btn" onClick={() => setShowModal(false)}>İptal</button>
-                            <button className="btn btn-primary" onClick={save} disabled={!form.customer_id || !form.amount}>Kaydet</button>
+                            <button type="button" className="btn" onClick={() => setShowModal(false)}>İptal</button>
+                            <button type="button" data-testid="payment-save" className="btn btn-primary" onClick={save} disabled={!form.customer_id || !form.amount}>Kaydet</button>
                         </div>
                     </div>
                 </div>

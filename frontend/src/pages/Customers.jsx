@@ -160,7 +160,7 @@ export default function Customers() {
                         )}
                     </p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Yeni Müşteri</button>
+                <button type="button" data-testid="customers-add" className="btn btn-primary" onClick={() => setShowModal(true)}>+ Yeni Müşteri</button>
             </div>
 
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -168,6 +168,7 @@ export default function Customers() {
                     <div style={{ position: 'relative' }}>
                         <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 16 }}>🔍</span>
                         <input
+                            data-testid="customers-search"
                             style={{ width: '100%', padding: '10px 14px 10px 40px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, outline: 'none', transition: 'border 0.18s' }}
                             placeholder="İsim, telefon veya IBAN ile ara..."
                             value={search}
@@ -316,11 +317,11 @@ export default function Customers() {
             {/* Yeni Müşteri Modal */}
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
+                    <div className="modal" data-testid="customer-new-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-title">Yeni Müşteri</div>
                         <div className="form-group">
                             <label>Ad Soyad *</label>
-                            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ahmet Yılmaz" />
+                            <input data-testid="customer-form-name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ahmet Yılmaz" />
                         </div>
                         <div className="form-row">
                             <div className="form-group">
@@ -351,8 +352,8 @@ export default function Customers() {
                             <textarea rows={3} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
                         </div>
                         <div className="modal-footer">
-                            <button className="btn" onClick={() => setShowModal(false)}>İptal</button>
-                            <button className="btn btn-primary" onClick={save} disabled={!form.name}>Kaydet</button>
+                            <button type="button" className="btn" onClick={() => setShowModal(false)}>İptal</button>
+                            <button type="button" data-testid="customer-form-save" className="btn btn-primary" onClick={save} disabled={!form.name}>Kaydet</button>
                         </div>
                     </div>
                 </div>

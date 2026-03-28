@@ -103,7 +103,7 @@ export default function BankStatement() {
                     boxShadow: '0 4px 12px rgba(26,86,219,0.3)', transition: 'all 0.18s'
                 }}>
                     {uploading ? '⏳ Yükleniyor...' : '📂 Ekstre Yükle'}
-                    <input type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={upload} style={{ display: 'none' }} />
+                    <input data-testid="bank-upload-input" type="file" accept=".pdf,.xlsx,.xls,.csv" onChange={upload} style={{ display: 'none' }} />
                 </label>
             </div>
 
@@ -332,7 +332,9 @@ export default function BankStatement() {
                                     for (const tx of pending) {
                                         try {
                                             await axios.post(`${API}/bank/transactions/${tx.id}/convert`)
-                                        } catch { }
+                                        } catch {
+                                            /* tek işlem başarısız; döngü devam eder */
+                                        }
                                     }
                                     alert(`✅ ${pending.length} işlem ödemeye dönüştürüldü!`)
                                     load()

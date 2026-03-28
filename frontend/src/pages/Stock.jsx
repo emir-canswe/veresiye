@@ -130,7 +130,7 @@ export default function Stock() {
                 <div style={{ display: 'flex', gap: 10 }}>
                     <button className="btn btn-outline" onClick={() => setShowCategoryModal(true)}>+ Kategori</button>
                     <button className="btn btn-outline" onClick={() => setShowMovementModal(true)}>📦 Stok Hareketi</button>
-                    <button className="btn btn-primary" onClick={openAddProduct}>+ Yeni Ürün</button>
+                    <button type="button" data-testid="stock-add-product" className="btn btn-primary" onClick={openAddProduct}>+ Yeni Ürün</button>
                 </div>
             </div>
 
@@ -312,11 +312,11 @@ export default function Stock() {
             {/* Ürün Modal */}
             {showProductModal && (
                 <div className="modal-overlay" onClick={() => setShowProductModal(false)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
+                    <div className="modal" data-testid="stock-product-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-title">{editProduct ? 'Ürün Düzenle' : 'Yeni Ürün'}</div>
                         <div className="form-group">
                             <label>Ürün Adı *</label>
-                            <input value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} placeholder="Ürün adı" />
+                            <input data-testid="stock-product-name" value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} placeholder="Ürün adı" />
                         </div>
                         <div className="form-row">
                             <div className="form-group">
@@ -369,8 +369,8 @@ export default function Stock() {
                             <textarea rows={2} value={productForm.description} onChange={e => setProductForm({ ...productForm, description: e.target.value })} />
                         </div>
                         <div className="modal-footer">
-                            <button className="btn" onClick={() => setShowProductModal(false)}>İptal</button>
-                            <button className="btn btn-primary" onClick={saveProduct} disabled={!productForm.name}>Kaydet</button>
+                            <button type="button" className="btn" onClick={() => setShowProductModal(false)}>İptal</button>
+                            <button type="button" data-testid="stock-product-save" className="btn btn-primary" onClick={saveProduct} disabled={!productForm.name}>Kaydet</button>
                         </div>
                     </div>
                 </div>

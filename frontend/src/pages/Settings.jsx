@@ -50,7 +50,7 @@ function UserManagement() {
                     <h3 style={{ fontSize: 17, fontWeight: 700, color: '#111827' }}>Kullanıcı Yönetimi</h3>
                     <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>Sisteme erişebilecek kullanıcıları yönetin.</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Yeni Kullanıcı</button>
+                <button type="button" data-testid="settings-add-user" className="btn btn-primary" onClick={() => setShowModal(true)}>+ Yeni Kullanıcı</button>
             </div>
 
             {msg && (
@@ -107,19 +107,19 @@ function UserManagement() {
 
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal" onClick={e => e.stopPropagation()}>
+                    <div className="modal" data-testid="settings-user-modal" onClick={e => e.stopPropagation()}>
                         <div className="modal-title">Yeni Kullanıcı Ekle</div>
                         <div className="form-group">
                             <label>Kullanıcı Adı *</label>
-                            <input value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} placeholder="Kullanıcı adı" />
+                            <input data-testid="settings-user-username" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} placeholder="Kullanıcı adı" />
                         </div>
                         <div className="form-group">
                             <label>Şifre *</label>
-                            <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="En az 6 karakter" />
+                            <input data-testid="settings-user-password" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="En az 6 karakter" />
                         </div>
                         <div className="form-group">
                             <label>Rol *</label>
-                            <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
+                            <select data-testid="settings-user-role" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
                                 <option value="calisan">👤 Çalışan</option>
                                 <option value="muhasebeci">📊 Muhasebeci</option>
                                 <option value="admin">👑 Admin</option>
@@ -131,8 +131,8 @@ function UserManagement() {
                             {form.role === 'admin' && '👑 Admin: Tüm sayfalara erişebilir ve kullanıcı yönetimi yapabilir.'}
                         </div>
                         <div className="modal-footer">
-                            <button className="btn" onClick={() => setShowModal(false)}>İptal</button>
-                            <button className="btn btn-primary" onClick={save} disabled={!form.username || !form.password}>Oluştur</button>
+                            <button type="button" className="btn" onClick={() => setShowModal(false)}>İptal</button>
+                            <button type="button" data-testid="settings-user-create" className="btn btn-primary" onClick={save} disabled={!form.username || !form.password}>Oluştur</button>
                         </div>
                     </div>
                 </div>
@@ -284,7 +284,7 @@ export default function Settings({ user, onLogout }) {
 
                         <div style={{ padding: '10px 8px' }}>
                             {tabs.map(tab => (
-                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+                                <button type="button" key={tab.id} data-testid={`settings-tab-${tab.id}`} onClick={() => setActiveTab(tab.id)} style={{
                                     width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                                     padding: '11px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
                                     background: activeTab === tab.id ? '#eff6ff' : 'transparent',
@@ -450,7 +450,7 @@ export default function Settings({ user, onLogout }) {
                                             Tüm müşteri, borç ve ödeme verileriniz JSON formatında dışa aktarılır.
                                             Verilerinizi kaybetmemek için düzenli yedek almanız önerilir.
                                         </p>
-                                        <button className="btn btn-primary" onClick={downloadBackup}>
+                                        <button type="button" data-testid="settings-backup-download" className="btn btn-primary" onClick={downloadBackup}>
                                             ⬇️ Yedeği İndir
                                         </button>
                                     </div>
