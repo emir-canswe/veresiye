@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.models import Debt
 from schemas.schemas import DebtCreate, DebtOut
-from datetime import datetime
+from datetime_util import utc_now
 
 router = APIRouter(prefix="/debts", tags=["Borçlar"])
 
@@ -22,7 +22,7 @@ def create_debt(data: DebtCreate, db: Session = Depends(get_db)):
         amount=data.amount,
         description=data.description,
         category=data.category,
-        date=data.date or datetime.utcnow()
+        date=data.date or utc_now()
     )
     db.add(debt)
     db.commit()

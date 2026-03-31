@@ -28,3 +28,8 @@ Thumbs.db
 
 # Geçici yedek (eski export davranışı)
 backend/veresiye_yedek_*.json
+
+# Yerel SQLite / E2E test veritabanları
+*.db
+*.sqlite
+backend/e2e*.db

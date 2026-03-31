@@ -8,6 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database import engine, get_db
+from datetime_util import utc_now
 from models.models import (
     BankTransaction,
     CompanySettings,
@@ -59,7 +60,7 @@ def _parse_dt(val):
     try:
         return datetime.strptime(s[:10], "%Y-%m-%d")
     except ValueError:
-        return datetime.utcnow()
+        return utc_now()
 
 
 def _reset_pg_sequences(db: Session) -> None:
@@ -88,7 +89,7 @@ def _build_export_payload(db: Session) -> dict:
     company = db.query(CompanySettings).filter(CompanySettings.id == 1).first()
 
     return {
-        "backup_date": datetime.utcnow().isoformat(),
+        "backup_date": utc_now().isoformat(),
         "version": BACKUP_VERSION,
         "company": {
             "company_name": company.company_name if company else "İşletmem",
@@ -216,7 +217,7 @@ def export_backup(
 ):
     data = _build_export_payload(db)
     raw = json.dumps(data, ensure_ascii=False, indent=2)
-    filename = f"veresiye_yedek_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    filename = f"veresiye_yedek_{utc_now().strftime('%Y%m%d_%H%M%S')}.json"
     return StreamingResponse(
         io.BytesIO(raw.encode("utf-8")),
         media_type="application/json",
@@ -285,7 +286,7 @@ async def import_backup(
             row.phone = (comp.get("phone") or None) and str(comp.get("phone"))[:64]
             row.address = comp.get("address")
             row.city = (comp.get("city") or None) and str(comp.get("city"))[:128]
-            row.updated_at = datetime.utcnow()
+            row.updated_at = utc_now()
 
         for c in data.get("customers") or []:
             db.add(
@@ -296,7 +297,7 @@ async def import_backup(
                     address=c.get("address"),
                     notes=c.get("notes"),
                     son_odeme_tarihi=_parse_dt(c.get("son_odeme_tarihi")),
-                    created_at=_parse_dt(c.get("created_at")) or datetime.utcnow(),
+                    created_at=_parse_dt(c.get("created_at")) or utc_now(),
                 )
             )
 
@@ -315,14 +316,14 @@ async def import_backup(
                 BankTransaction(
                     id=t["id"],
                     transaction_hash=t["transaction_hash"],
-                    date=_parse_dt(t.get("date")) or datetime.utcnow(),
+                    date=_parse_dt(t.get("date")) or utc_now(),
                     sender_name=t.get("sender_name"),
                     sender_iban=t.get("sender_iban"),
                     amount=float(t["amount"]),
                     description=t.get("description"),
                     is_matched=bool(t.get("is_matched")),
                     matched_customer_id=t.get("matched_customer_id"),
-                    created_at=_parse_dt(t.get("created_at")) or datetime.utcnow(),
+                    created_at=_parse_dt(t.get("created_at")) or utc_now(),
                 )
             )
 
@@ -334,8 +335,8 @@ async def import_backup(
                     amount=float(d["amount"]),
                     description=d.get("description"),
                     category=d.get("category"),
-                    date=_parse_dt(d.get("date")) or datetime.utcnow(),
-                    created_at=_parse_dt(d.get("created_at")) or datetime.utcnow(),
+                    date=_parse_dt(d.get("date")) or utc_now(),
+                    created_at=_parse_dt(d.get("created_at")) or utc_now(),
                 )
             )
 
@@ -352,9 +353,9 @@ async def import_backup(
                     amount=float(p["amount"]),
                     method=pm,
                     description=p.get("description"),
-                    date=_parse_dt(p.get("date")) or datetime.utcnow(),
+                    date=_parse_dt(p.get("date")) or utc_now(),
                     bank_transaction_id=p.get("bank_transaction_id"),
-                    created_at=_parse_dt(p.get("created_at")) or datetime.utcnow(),
+                    created_at=_parse_dt(p.get("created_at")) or utc_now(),
                 )
             )
 
@@ -364,7 +365,7 @@ async def import_backup(
                     id=sc["id"],
                     name=sc["name"],
                     description=sc.get("description"),
-                    created_at=_parse_dt(sc.get("created_at")) or datetime.utcnow(),
+                    created_at=_parse_dt(sc.get("created_at")) or utc_now(),
                 )
             )
 
@@ -382,7 +383,7 @@ async def import_backup(
                     unit=pr.get("unit") or "adet",
                     description=pr.get("description"),
                     is_active=pr.get("is_active", True),
-                    created_at=_parse_dt(pr.get("created_at")) or datetime.utcnow(),
+                    created_at=_parse_dt(pr.get("created_at")) or utc_now(),
                 )
             )
 
@@ -396,8 +397,8 @@ async def import_backup(
                     unit_price=float(m.get("unit_price") or 0),
                     customer_id=m.get("customer_id"),
                     description=m.get("description"),
-                    date=_parse_dt(m.get("date")) or datetime.utcnow(),
-                    created_at=_parse_dt(m.get("created_at")) or datetime.utcnow(),
+                    date=_parse_dt(m.get("date")) or utc_now(),
+                    created_at=_parse_dt(m.get("created_at")) or utc_now(),
                 )
             )
 
@@ -419,10 +420,10 @@ async def import_backup(
                     amount=float(ft["amount"]),
                     category=ft.get("category"),
                     description=ft.get("description"),
-                    date=_parse_dt(ft.get("date")) or datetime.utcnow(),
+                    date=_parse_dt(ft.get("date")) or utc_now(),
                     payment_method=fpm,
                     customer_id=ft.get("customer_id"),
-                    created_at=_parse_dt(ft.get("created_at")) or datetime.utcnow(),
+                    created_at=_parse_dt(ft.get("created_at")) or utc_now(),
                 )
             )
 
