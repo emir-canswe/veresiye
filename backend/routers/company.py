@@ -1,11 +1,12 @@
-from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from database import get_db
+from datetime import datetime
+from datetime_util import utc_now
 from models.models import CompanySettings, User
 from routers.auth import get_current_user, require_admin
 
@@ -21,8 +22,7 @@ class CompanyOut(BaseModel):
     city: Optional[str] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CompanyUpdate(BaseModel):
@@ -65,7 +65,7 @@ def update_company_settings(
     row.phone = data.phone.strip() if data.phone else None
     row.address = data.address.strip() if data.address else None
     row.city = data.city.strip() if data.city else None
-    row.updated_at = datetime.utcnow()
+    row.updated_at = utc_now()
     db.commit()
     db.refresh(row)
     return row

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
 from enum import Enum
@@ -13,8 +13,7 @@ class CustomerIBANBase(BaseModel):
 
 class CustomerIBANOut(CustomerIBANBase):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CustomerBase(BaseModel):
     name: str
@@ -30,8 +29,7 @@ class CustomerOut(CustomerBase):
     id: int
     created_at: datetime
     ibans: list[CustomerIBANOut] = []
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class DebtBase(BaseModel):
     customer_id: int
@@ -46,8 +44,7 @@ class DebtCreate(DebtBase):
 class DebtOut(DebtBase):
     id: int
     created_at: datetime
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PaymentBase(BaseModel):
     customer_id: int
@@ -63,8 +60,7 @@ class PaymentOut(PaymentBase):
     id: int
     created_at: datetime
     bank_transaction_id: Optional[int] = None
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class BankTransactionOut(BaseModel):
     id: int
@@ -78,8 +74,7 @@ class BankTransactionOut(BaseModel):
     matched_customer_id: Optional[int] = None
     payment_id: Optional[int] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class BankTransactionMatch(BaseModel):
     customer_id: int

@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum, Text, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
-from datetime import datetime
+from datetime_util import utc_now
 import enum
 
 class PaymentMethod(str, enum.Enum):
@@ -26,7 +26,7 @@ class CompanySettings(Base):
     phone = Column(String)
     address = Column(Text)
     city = Column(String)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
 
 class User(Base):
@@ -35,7 +35,7 @@ class User(Base):
     username = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
     role = Column(String, default="calisan")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
 class Customer(Base):
     __tablename__ = "customers"
@@ -45,7 +45,7 @@ class Customer(Base):
     address = Column(Text)
     notes = Column(Text)
     son_odeme_tarihi = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
     ibans = relationship("CustomerIBAN", back_populates="customer")
     debts = relationship("Debt", back_populates="customer")
     payments = relationship("Payment", back_populates="customer")
@@ -65,8 +65,8 @@ class Debt(Base):
     amount = Column(Float, nullable=False)
     description = Column(Text)
     category = Column(String)
-    date = Column(DateTime, default=datetime.utcnow)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    date = Column(DateTime, default=utc_now)
+    created_at = Column(DateTime, default=utc_now)
     customer = relationship("Customer", back_populates="debts")
 
 class Payment(Base):
@@ -76,9 +76,9 @@ class Payment(Base):
     amount = Column(Float, nullable=False)
     method = Column(Enum(PaymentMethod), nullable=False)
     description = Column(Text)
-    date = Column(DateTime, default=datetime.utcnow)
+    date = Column(DateTime, default=utc_now)
     bank_transaction_id = Column(Integer, ForeignKey("bank_transactions.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
     customer = relationship("Customer", back_populates="payments")
     bank_transaction = relationship("BankTransaction", back_populates="payment", uselist=False)
 
@@ -93,7 +93,7 @@ class BankTransaction(Base):
     description = Column(Text)
     matched_customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     is_matched = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
     payment = relationship("Payment", back_populates="bank_transaction", uselist=False)
 
 # YENİ: Stok Kategorisi
@@ -102,7 +102,7 @@ class StockCategory(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     description = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
     products = relationship("Product", back_populates="category")
 
 # YENİ: Ürün/Stok
@@ -119,7 +119,7 @@ class Product(Base):
     unit = Column(String, default="adet")       # adet, kg, lt vb.
     description = Column(Text)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
     category = relationship("StockCategory", back_populates="products")
     movements = relationship("StockMovement", back_populates="product")
 
@@ -133,8 +133,8 @@ class StockMovement(Base):
     unit_price = Column(Float, default=0)
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     description = Column(Text)
-    date = Column(DateTime, default=datetime.utcnow)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    date = Column(DateTime, default=utc_now)
+    created_at = Column(DateTime, default=utc_now)
     product = relationship("Product", back_populates="movements")
 
 # YENİ: Gelir/Gider
@@ -145,7 +145,7 @@ class Transaction(Base):
     amount = Column(Float, nullable=False)
     category = Column(String)
     description = Column(Text)
-    date = Column(DateTime, default=datetime.utcnow)
+    date = Column(DateTime, default=utc_now)
     payment_method = Column(Enum(PaymentMethod), default=PaymentMethod.nakit)
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.models import Customer, CustomerIBAN, Debt, Payment, BankTransaction
 from schemas.schemas import CustomerCreate, CustomerOut
-from datetime import datetime
+from datetime_util import utc_now
 
 router = APIRouter(prefix="/customers", tags=["Müşteriler"])
 
@@ -41,7 +41,7 @@ def create_customer(data: CustomerCreate, db: Session = Depends(get_db)):
         address=data.address,
         notes=data.notes,
         son_odeme_tarihi=data.son_odeme_tarihi,
-        created_at=datetime.utcnow()
+        created_at=utc_now()
     )
     db.add(customer)
     db.flush()
@@ -96,7 +96,7 @@ def update_son_odeme(customer_id: int, db: Session = Depends(get_db)):
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Müşteri bulunamadı")
-    customer.son_odeme_tarihi = datetime.utcnow()
+    customer.son_odeme_tarihi = utc_now()
     db.commit()
     return {"message": "Son ödeme tarihi güncellendi"}
 

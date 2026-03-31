@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.models import Payment, Customer
 from schemas.schemas import PaymentCreate, PaymentOut
-from datetime import datetime
+from datetime_util import utc_now
 
 router = APIRouter(prefix="/payments", tags=["Ödemeler"])
 
@@ -19,7 +19,7 @@ def get_customer_payments(customer_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=PaymentOut)
 def create_payment(data: PaymentCreate, db: Session = Depends(get_db)):
-    payment_date = data.date or datetime.utcnow()
+    payment_date = data.date or utc_now()
     payment = Payment(
         customer_id=data.customer_id,
         amount=data.amount,

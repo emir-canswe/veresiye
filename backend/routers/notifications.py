@@ -5,7 +5,7 @@ from database import get_db
 from models.models import Customer, Debt, Payment
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from pydantic import EmailStr
-from datetime import datetime
+from datetime_util import utc_now
 import os
 
 router = APIRouter(prefix="/notifications", tags=["Bildirimler"])
@@ -37,7 +37,7 @@ def get_overdue_customers(db: Session) -> list:
         if not c.son_odeme_tarihi:
             overdue.append({"customer": c, "balance": balance, "days": None})
             continue
-        days = (datetime.utcnow() - c.son_odeme_tarihi).days
+        days = (utc_now() - c.son_odeme_tarihi).days
         if days > 30:
             overdue.append({"customer": c, "balance": balance, "days": days})
     return overdue
@@ -171,7 +171,7 @@ async def send_single_notification(
 
     days = None
     if customer.son_odeme_tarihi:
-        days = (datetime.utcnow() - customer.son_odeme_tarihi).days
+        days = (utc_now() - customer.son_odeme_tarihi).days
 
     background_tasks.add_task(send_overdue_email, email, customer.name, balance, days)
 

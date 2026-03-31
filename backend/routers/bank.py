@@ -10,6 +10,7 @@ import pandas as pd
 import pdfplumber
 import io
 from datetime import datetime
+from datetime_util import utc_now
 
 router = APIRouter(prefix="/bank", tags=["Banka Ekstresi"])
 
@@ -105,7 +106,7 @@ async def upload_statement(file: UploadFile = File(...), db: Session = Depends(g
         try:
             date = datetime.strptime(str(row["date"]), "%d.%m.%Y")
         except (ValueError, TypeError):
-            date = datetime.utcnow()
+            date = utc_now()
 
         tx = BankTransaction(
             transaction_hash=tx_hash,

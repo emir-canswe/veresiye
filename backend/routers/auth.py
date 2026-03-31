@@ -6,8 +6,8 @@ from database import get_db
 from models.models import User
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from datetime import datetime, timedelta
-from pydantic import BaseModel
+from datetime import datetime, timedelta, timezone
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-insecure-set-secret-key-in-env")
@@ -35,8 +35,7 @@ class UserOut(BaseModel):
     username: str
     role: str
     created_at: datetime
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UpdateUsername(BaseModel):
     new_username: str
@@ -53,7 +52,7 @@ def hash_password(password):
 
 def create_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 

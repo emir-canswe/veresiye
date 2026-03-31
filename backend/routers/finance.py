@@ -6,6 +6,7 @@ from models.models import Transaction, TransactionType, PaymentMethod
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
+from datetime_util import utc_now
 
 router = APIRouter(prefix="/finance", tags=["Gelir/Gider"])
 
@@ -43,7 +44,7 @@ def create_transaction(data: TransactionCreate, db: Session = Depends(get_db)):
         amount=data.amount,
         category=data.category,
         description=data.description,
-        date=data.date or datetime.utcnow(),
+        date=data.date or utc_now(),
         payment_method=data.payment_method,
         customer_id=data.customer_id
     )

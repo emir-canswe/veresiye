@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +12,29 @@ from routers import auth, backup, stock, finance, notifications, company
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="TahsilatPro API", version="2.1.0")
+_DEV_SECRET_DEFAULT = "dev-only-insecure-set-secret-key-in-env"
+
+
+def validate_production_secrets() -> None:
+    """Üretimde güçlü SECRET_KEY zorunluluğu (routers.auth varsayılanı ile aynı metin)."""
+    env = os.getenv("ENV", "").strip().lower()
+    if env not in ("production", "prod"):
+        return
+    sk = (os.getenv("SECRET_KEY") or "").strip()
+    if not sk or sk == _DEV_SECRET_DEFAULT:
+        raise RuntimeError(
+            "ENV=production iken SECRET_KEY ortam değişkeni zorunludur ve "
+            "geliştirme varsayılanı kullanılamaz."
+        )
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    validate_production_secrets()
+    yield
+
+
+app = FastAPI(title="TahsilatPro API", version="2.1.0", lifespan=lifespan)
 
 _cors_raw = os.getenv(
     "CORS_ORIGINS",
